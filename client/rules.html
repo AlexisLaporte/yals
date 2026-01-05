@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slay Rules - Game Guide</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        h1 { color: var(--accent); margin-bottom: 0.5rem; }
+        .attribution {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        .attribution a { color: var(--accent); }
+        h2 {
+            color: var(--accent);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        th {
+            background: var(--bg-tertiary);
+            font-weight: bold;
+        }
+        .unit-icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        .tip {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">← Back to Game</a>
+
+    <h1>Slay - Game Rules</h1>
+
+    <div class="attribution">
+        <strong>Attribution:</strong> Slay is an original game created by Sean O'Connor.
+        These rules are based on the <a href="https://www.windowsgames.co.uk/slay.html" target="_blank">original Slay game</a>.
+        This project is a tribute/homage to the original - all intellectual property belongs to the original creator.
+        <br><br>
+        <em>"Slay is a simple but addictive strategy game where you must conquer an island by building up armies and using them to capture your enemies' capitals."</em>
+    </div>
+
+    <h2>Objective</h2>
+    <p>Conquer the entire island by capturing all enemy territories. A player is eliminated when they lose all their territory.</p>
+
+    <h2>Territories &amp; Income</h2>
+    <p>The island is divided into <strong>territories</strong> - groups of connected hexagons belonging to the same player.</p>
+    <ul>
+        <li>Each territory earns <strong>1 credit per hexagon per turn</strong> (except hexagons with trees)</li>
+        <li>Each territory has its own <strong>treasury</strong> (gold reserve)</li>
+        <li>Territories with 2+ hexagons have a <strong>capital</strong> (marked with a flag)</li>
+        <li>If two territories merge, the smaller one's gold transfers to the larger one</li>
+    </ul>
+
+    <div class="tip">
+        <strong>Bankruptcy:</strong> If a territory cannot pay its units' wages at the end of a turn,
+        all units in that territory die and become gravestones!
+    </div>
+
+    <h2>Units</h2>
+    <table>
+        <tr>
+            <th>Unit</th>
+            <th>Strength</th>
+            <th>Buy Cost</th>
+            <th>Upkeep/Turn</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td><span class="unit-icon" style="background:#E08080">P</span> Peasant</td>
+            <td>1</td>
+            <td>10</td>
+            <td>2</td>
+            <td>Can chop trees</td>
+        </tr>
+        <tr>
+            <td><span class="unit-icon" style="background:#80A0E0">S</span> Spearman</td>
+            <td>2</td>
+            <td>20</td>
+            <td>6</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td><span class="unit-icon" style="background:#80C080">K</span> Knight</td>
+            <td>3</td>
+            <td>30</td>
+            <td>18</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td><span class="unit-icon" style="background:#E0E080">B</span> Baron</td>
+            <td>4</td>
+            <td>40</td>
+            <td>54</td>
+            <td>Strongest unit</td>
+        </tr>
+        <tr>
+            <td><span class="unit-icon" style="background:#888">C</span> Castle</td>
+            <td>2 (defense)</td>
+            <td>15</td>
+            <td>0</td>
+            <td>Cannot move, defends like spearman</td>
+        </tr>
+    </table>
+
+    <h3>Combining Units</h3>
+    <p>Move a unit onto another friendly unit in the same territory to <strong>combine</strong> them:</p>
+    <ul>
+        <li>Peasant + Peasant = Spearman (strength 1+1=2)</li>
+        <li>Peasant + Spearman = Knight (strength 1+2=3)</li>
+        <li>Peasant + Knight = Baron (strength 1+3=4)</li>
+        <li>Spearman + Spearman = Baron (strength 2+2=4)</li>
+    </ul>
+
+    <h2>Combat</h2>
+    <p>To attack an enemy hexagon:</p>
+    <ul>
+        <li>Your unit must be <strong>stronger than the enemy's defense</strong></li>
+        <li>Each unit can only make <strong>one attack per turn</strong></li>
+        <li>Units can move freely within their own territory (unlimited moves)</li>
+    </ul>
+
+    <h3>Defense Strength</h3>
+    <p>A hexagon's defense is the <strong>highest</strong> of:</p>
+    <ul>
+        <li>The unit on that hex (if any)</li>
+        <li>Any adjacent friendly unit that could protect it</li>
+        <li>Capital: defends at strength 1 (like peasant)</li>
+        <li>Castle: defends at strength 2 (like spearman)</li>
+    </ul>
+
+    <div class="tip">
+        <strong>Example:</strong> An enemy peasant (str 1) next to an enemy knight (str 3) has defense 3,
+        so you need a Baron (str 4) to attack it!
+    </div>
+
+    <h2>Trees</h2>
+    <p>Trees are natural obstacles on the map:</p>
+    <ul>
+        <li>Trees <strong>grow automatically</strong> at the start of each turn on empty hexagons</li>
+        <li>Trees spread to hexes surrounded by 2+ trees</li>
+        <li>Hexagons with trees <strong>generate no income</strong></li>
+        <li>Any unit can <strong>chop a tree</strong> in their own territory (counts as their one action)</li>
+        <li>You <strong>cannot attack</strong> enemy hexagons with trees - they must clear them first</li>
+    </ul>
+
+    <h2>Gravestones</h2>
+    <p>When units die from bankruptcy (starvation), they become gravestones:</p>
+    <ul>
+        <li>Gravestones <strong>block the hex</strong> - you cannot place units or move through them</li>
+        <li>Hexagons with graves <strong>generate no income</strong></li>
+        <li>Any unit can <strong>clear a grave</strong> in their own territory (counts as their one action)</li>
+        <li>Graves are <strong>cleared when captured</strong> by an enemy</li>
+    </ul>
+
+    <div class="tip">
+        <strong>Warning:</strong> Bankruptcy is devastating - all your units become graves blocking your territory!
+    </div>
+
+    <h2>Strategy Tips</h2>
+    <ul>
+        <li><strong>Economy first:</strong> Don't overbuild units - bankruptcy kills everything!</li>
+        <li><strong>Combine wisely:</strong> Making a Baron (54 upkeep) can bankrupt a small territory</li>
+        <li><strong>Chop trees:</strong> Trees reduce income - clear them when you can afford to</li>
+        <li><strong>Defend borders:</strong> Place units to protect weak hexagons</li>
+        <li><strong>Attack capitals:</strong> Destroying a capital can split enemy territory</li>
+        <li><strong>Use castles:</strong> Cheap permanent defense for strategic hexagons</li>
+    </ul>
+
+    <h2>Turn Order</h2>
+    <ol>
+        <li><strong>Income:</strong> Each territory earns gold from its hexagons</li>
+        <li><strong>Tree growth:</strong> New trees may appear on empty hexagons</li>
+        <li><strong>Your actions:</strong> Move units, buy units, attack enemies, chop trees</li>
+        <li><strong>Wages:</strong> Pay upkeep for all units (bankruptcy check)</li>
+        <li><strong>Next player</strong></li>
+    </ol>
+
+    <script>
+        // Apply theme from localStorage
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+    </script>
+</body>
+</html>

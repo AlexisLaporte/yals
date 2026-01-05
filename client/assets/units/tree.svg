@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Pin simplifie - 2 triangles -->
+  <polygon points="16,2 8,14 24,14" fill="currentColor"/>
+  <polygon points="16,10 6,24 26,24" fill="currentColor"/>
+  <!-- Tronc -->
+  <rect x="13" y="24" width="6" height="6" fill="currentColor"/>
+</svg>

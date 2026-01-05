@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Petit bonhomme simple - stick figure -->
+  <circle cx="16" cy="8" r="4" fill="currentColor"/>
+  <line x1="16" y1="12" x2="16" y2="22" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  <line x1="16" y1="14" x2="10" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="14" x2="22" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="22" x2="11" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <line x1="16" y1="22" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>
