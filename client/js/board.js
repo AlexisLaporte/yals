@@ -43,6 +43,7 @@ class HexBoard {
 
         // Zoom/pan handlers
         this.setupZoomPan();
+        this.setupTouchControls();
     }
 
     loadColorsFromCSS() {
@@ -173,6 +174,137 @@ class HexBoard {
         });
     }
 
+    setupTouchControls() {
+        let touches = {};
+        let lastDistance = 0;
+        let lastMidpoint = null;
+        const TOUCH_DRAG_THRESHOLD = 10;
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+
+            // Store all active touches
+            touches = {};
+            Array.from(e.touches).forEach(t => {
+                touches[t.identifier] = {
+                    startX: t.clientX,
+                    startY: t.clientY,
+                    x: t.clientX,
+                    y: t.clientY
+                };
+            });
+
+            // If two fingers, calculate initial distance for pinch zoom
+            if (e.touches.length === 2) {
+                const t0 = e.touches[0];
+                const t1 = e.touches[1];
+                lastDistance = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+                lastMidpoint = {
+                    x: (t0.clientX + t1.clientX) / 2,
+                    y: (t0.clientY + t1.clientY) / 2
+                };
+            }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1) {
+                // Single finger: pan
+                const touch = e.touches[0];
+                const prev = touches[touch.identifier];
+
+                if (prev) {
+                    const dx = touch.clientX - prev.x;
+                    const dy = touch.clientY - prev.y;
+
+                    // Check if moved enough to be considered dragging
+                    const totalDx = touch.clientX - prev.startX;
+                    const totalDy = touch.clientY - prev.startY;
+                    const distance = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
+
+                    if (distance > TOUCH_DRAG_THRESHOLD) {
+                        this.isDragging = true;
+                        this.panX += dx;
+                        this.panY += dy;
+                        this.render();
+                    }
+
+                    prev.x = touch.clientX;
+                    prev.y = touch.clientY;
+                }
+            } else if (e.touches.length === 2) {
+                // Two fingers: pinch zoom + pan
+                const t0 = e.touches[0];
+                const t1 = e.touches[1];
+
+                const currentDistance = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+                const currentMidpoint = {
+                    x: (t0.clientX + t1.clientX) / 2,
+                    y: (t0.clientY + t1.clientY) / 2
+                };
+
+                if (lastDistance > 0 && lastMidpoint) {
+                    // Zoom based on distance change
+                    const zoomFactor = currentDistance / lastDistance;
+                    const newScale = Math.max(0.5, Math.min(3, this.scale * zoomFactor));
+
+                    // Zoom toward midpoint
+                    const rect = this.canvas.getBoundingClientRect();
+                    const midX = currentMidpoint.x - rect.left;
+                    const midY = currentMidpoint.y - rect.top;
+
+                    const scaleChange = newScale / this.scale;
+                    this.panX = midX - (midX - this.panX) * scaleChange;
+                    this.panY = midY - (midY - this.panY) * scaleChange;
+                    this.scale = newScale;
+
+                    // Pan based on midpoint movement
+                    const panDx = currentMidpoint.x - lastMidpoint.x;
+                    const panDy = currentMidpoint.y - lastMidpoint.y;
+                    this.panX += panDx;
+                    this.panY += panDy;
+
+                    this.render();
+                }
+
+                lastDistance = currentDistance;
+                lastMidpoint = currentMidpoint;
+                this.isDragging = true;
+            }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+
+            // Remove ended touches
+            Array.from(e.changedTouches).forEach(t => {
+                delete touches[t.identifier];
+            });
+
+            // Reset if no touches remain
+            if (e.touches.length === 0) {
+                if (this.isDragging) {
+                    this.wasDragging = true;
+                }
+                this.isDragging = false;
+                lastDistance = 0;
+                lastMidpoint = null;
+            } else if (e.touches.length === 1) {
+                // Switched from 2 fingers to 1, reset pinch state
+                lastDistance = 0;
+                lastMidpoint = null;
+            }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchcancel', (e) => {
+            touches = {};
+            this.isDragging = false;
+            lastDistance = 0;
+            lastMidpoint = null;
+        }, { passive: false });
+    }
+
     resetView() {
         this.scale = 1;
         this.panX = 0;
@@ -205,13 +337,30 @@ class HexBoard {
 
     resize() {
         const rect = this.canvas.parentElement.getBoundingClientRect();
-        const newWidth = Math.max(100, rect.width - 32);
-        const newHeight = Math.max(100, rect.height - 32);
 
-        // Only resize if dimensions actually changed
+        // Responsive padding based on screen size
+        const isMobile = window.innerWidth < 768;
+        const padding = isMobile ? 16 : 32;
+
+        const newWidth = Math.max(100, rect.width - padding);
+        const newHeight = Math.max(100, rect.height - padding);
+
+        // Only resize if dimensions actually changed (avoid unnecessary redraws)
         if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
             this.canvas.width = newWidth;
             this.canvas.height = newHeight;
+
+            // Adjust hex size for small screens to keep board visible
+            if (isMobile && this.state && this.state.board) {
+                const hexCount = Object.keys(this.state.board.hexes).length;
+                if (hexCount > 200) {
+                    this.hexSize = 18; // Smaller hexes for large maps on mobile
+                } else {
+                    this.hexSize = 20; // Default mobile size
+                }
+            } else {
+                this.hexSize = 24; // Default desktop size
+            }
         }
         this.render();
     }
