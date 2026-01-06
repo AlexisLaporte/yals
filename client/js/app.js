@@ -37,6 +37,26 @@ let humanPlayer = null;
     let currentPlayerId = null;
     let currentGameId = null;
 
+    // Responsive panel management
+    const rightPanel = document.getElementById('right-panel');
+
+    function checkMobileLayout() {
+        const isMobile = window.innerWidth < 768;
+
+        // Auto-collapse panel on mobile at startup or resize to mobile
+        if (isMobile && !rightPanel.classList.contains('collapsed')) {
+            rightPanel.classList.add('collapsed');
+        }
+        // Auto-expand panel on desktop if it was collapsed
+        else if (!isMobile && window.innerWidth >= 1024 && rightPanel.classList.contains('collapsed')) {
+            rightPanel.classList.remove('collapsed');
+        }
+    }
+
+    // Check layout on startup and resize
+    checkMobileLayout();
+    window.addEventListener('resize', checkMobileLayout);
+
     // URL helpers
     function updateGameUrl(gameId) {
         if (gameId) {
