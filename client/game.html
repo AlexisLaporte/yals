@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slay AI</title>
+    <link rel="icon" type="image/svg+xml" href="/static/assets/favicon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Game Setup Modal -->
+    <div id="setup-modal" class="modal">
+        <div class="modal-content">
+            <h2>New Game</h2>
+
+            <div class="setup-section">
+                <h3>Players</h3>
+                <div id="player-slots">
+                    <div class="player-slot" data-player="0">
+                        <span class="player-color" style="background: #E08080"></span>
+                        <span class="player-label">Red</span>
+                        <select class="player-type">
+                            <option value="human">You</option>
+                            <option value="classic_ai">Classic AI</option>
+                            <option value="llm_ai">Claude AI</option>
+                        </select>
+                        <select class="ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="player-slot" data-player="1">
+                        <span class="player-color" style="background: #80A0E0"></span>
+                        <span class="player-label">Blue</span>
+                        <select class="player-type">
+                            <option value="human">You</option>
+                            <option value="classic_ai" selected>Classic AI</option>
+                            <option value="llm_ai">Claude AI</option>
+                        </select>
+                        <select class="ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="player-slot" data-player="2">
+                        <span class="player-color" style="background: #80C080"></span>
+                        <span class="player-label">Green</span>
+                        <select class="player-type">
+                            <option value="human">You</option>
+                            <option value="classic_ai" selected>Classic AI</option>
+                            <option value="llm_ai">Claude AI</option>
+                        </select>
+                        <select class="ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="player-slot" data-player="3">
+                        <span class="player-color" style="background: #E0E080"></span>
+                        <span class="player-label">Yellow</span>
+                        <select class="player-type">
+                            <option value="human">You</option>
+                            <option value="classic_ai" selected>Classic AI</option>
+                            <option value="llm_ai">Claude AI</option>
+                        </select>
+                        <select class="ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>Map</h3>
+                <div class="map-options">
+                    <label>Size:
+                        <select id="map-size">
+                            <option value="15">Small (15x15)</option>
+                            <option value="20" selected>Medium (20x20)</option>
+                            <option value="25">Large (25x25)</option>
+                        </select>
+                    </label>
+                    <label>Seed:
+                        <input type="number" id="map-seed" placeholder="Random">
+                    </label>
+                </div>
+                <div class="map-preview-section">
+                    <canvas id="setup-map-preview" width="200" height="150"></canvas>
+                    <button id="btn-change-map" type="button">🔄 Change Map</button>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="btn-start-game">Start Game</button>
+                <button id="btn-cancel-setup" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Game Modal -->
+    <div id="load-modal" class="modal">
+        <div class="modal-content">
+            <h2>Load Game</h2>
+            <div id="games-list">
+                <!-- Games will be inserted here -->
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-cancel-load" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app">
+        <header>
+            <h1>Slay AI</h1>
+            <div id="controls">
+                <a href="/static/rules.html" target="_blank" class="btn-icon" title="Game Rules">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z"/>
+                    </svg>
+                </a>
+                <button id="btn-theme" title="Toggle theme">
+                    <svg id="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                </button>
+                <div class="dropdown">
+                    <button id="btn-new">New ▾</button>
+                    <div class="dropdown-content">
+                        <button id="btn-new-custom">Custom Game...</button>
+                        <button id="btn-quick-ai">Quick AI Battle</button>
+                    </div>
+                </div>
+                <button id="btn-load">Load</button>
+
+                <!-- Unified playback controls: << < [play/turn] > >> -->
+                <div class="playback-controls">
+                    <button id="btn-first" title="First turn" disabled>◀◀</button>
+                    <button id="btn-prev" title="Previous turn" disabled>◀</button>
+                    <button id="btn-play-action" class="play-center" disabled>
+                        <span class="play-icon">▶</span>
+                        <span id="turn-nav">-/-</span>
+                    </button>
+                    <button id="btn-step" title="Next turn" disabled>▶</button>
+                    <button id="btn-last" title="Run to end" disabled>▶▶</button>
+                    <div class="speed-toggle">
+                        <button class="speed-btn" data-speed="fast" title="Rapide">🐇</button>
+                        <button class="speed-btn active" data-speed="normal" title="Normal">🚶</button>
+                        <button class="speed-btn" data-speed="slow" title="Lent">🐢</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div id="game-area">
+                <canvas id="board"></canvas>
+                <button id="btn-reroll-map" class="map-overlay-btn">🔄 Change Map</button>
+                <div id="turn-indicator" style="display: none;">
+                    <span class="turn-banner">Your Turn! Click territory to buy, click unit to move</span>
+                </div>
+                <div id="region-panel" style="display: none;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <aside id="right-panel">
+                <button id="panel-toggle" class="panel-toggle" aria-label="Toggle panel">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                </button>
+
+                <!-- Tabs -->
+                <div class="panel-tabs">
+                    <button class="panel-tab active" data-tab="stats">📊 Stats</button>
+                    <button class="panel-tab" data-tab="log">📜 Log</button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tab-content active" id="tab-stats">
+                    <div id="stats-graph">
+                        <div id="metric-toggle">
+                            <button class="metric-btn active" data-metric="territory">Territory</button>
+                            <button class="metric-btn" data-metric="units">Units</button>
+                            <button class="metric-btn" data-metric="gold">Gold</button>
+                            <label class="trees-toggle" title="Show trees in chart">
+                                <input type="checkbox" id="toggle-trees" checked>
+                                <span>🌲</span>
+                            </label>
+                        </div>
+                        <canvas id="stats-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-log">
+                    <div id="log-content">
+                        <p class="log-info">Start a new game to begin...</p>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <div id="status-bar">
+            <span id="turn-info">Turn: -</span>
+            <span id="current-player">Current: -</span>
+            <span id="connection-status">Disconnected</span>
+        </div>
+    </div>
+
+    <script src="/static/js/board.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/ui.js"></script>
+    <script src="/static/js/human.js"></script>
+    <script src="/static/js/graph.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
