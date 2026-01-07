@@ -43,6 +43,24 @@ class Region:
         """Max gold storage: unlimited with capital, 10 without."""
         return 999999 if self.has_capital else 10
 
+    def has_castle(self) -> bool:
+        """Check if region has at least one castle unit (required in Slay)."""
+        from .units import UnitType
+        for h in self.hexes:
+            if h.unit and h.unit.type == UnitType.CASTLE:
+                return True
+        return False
+
+    def get_territory_maintenance(self) -> int:
+        """Calculate territory maintenance cost based on size (Slay rules).
+
+        Formula: (number_of_hexes - 1) gold per turn
+        - 1 hex: 0g maintenance
+        - 2 hexes: 1g maintenance
+        - 3 hexes: 2g maintenance, etc.
+        """
+        return max(0, len(self.hexes) - 1)
+
     def get_upkeep(self) -> int:
         """Total upkeep cost for all units in region."""
         total = 0
@@ -56,27 +74,47 @@ class Region:
         self.gold = min(self.gold + self.income, self.max_gold)
 
     def pay_upkeep(self) -> list[Hex]:
-        """Pay upkeep, return hexes with units that died from starvation."""
-        upkeep = self.get_upkeep()
-        if self.gold >= upkeep:
-            self.gold -= upkeep
+        """Pay upkeep (territory maintenance + unit upkeep), return hexes with units that died from starvation.
+
+        In Slay, each territory has a maintenance cost based on its size: (hexes - 1) gold.
+        This is IN ADDITION to unit upkeep costs.
+        """
+        territory_cost = self.get_territory_maintenance()
+        unit_upkeep = self.get_upkeep()
+        total_cost = territory_cost + unit_upkeep
+
+        if self.gold >= total_cost:
+            self.gold -= total_cost
             return []
 
-        # Not enough gold - units starve (weakest first)
-        starved = []
-        units_by_upkeep = sorted(
-            [h for h in self.hexes if h.unit],
-            key=lambda h: h.unit.upkeep
-        )
-        while self.gold < upkeep and units_by_upkeep:
-            h = units_by_upkeep.pop(0)
-            upkeep -= h.unit.upkeep
-            h.unit = None
-            h.terrain = Terrain.GRAVE  # Dead units become gravestones
-            starved.append(h)
+        # Not enough gold - try to pay territory maintenance first, then starve units
+        if self.gold >= territory_cost:
+            # Can afford territory maintenance, but not all unit upkeep
+            self.gold -= territory_cost
+            remaining_gold = self.gold
+            unit_upkeep_to_pay = unit_upkeep
 
-        self.gold = max(0, self.gold - upkeep)
-        return starved
+            # Starve weakest units first
+            starved = []
+            units_by_upkeep = sorted(
+                [h for h in self.hexes if h.unit],
+                key=lambda h: h.unit.upkeep
+            )
+            while remaining_gold < unit_upkeep_to_pay and units_by_upkeep:
+                h = units_by_upkeep.pop(0)
+                unit_upkeep_to_pay -= h.unit.upkeep
+                h.unit = None
+                h.terrain = Terrain.GRAVE
+                starved.append(h)
+
+            self.gold = max(0, remaining_gold - unit_upkeep_to_pay)
+            return starved
+        else:
+            # Cannot even afford territory maintenance - this shouldn't happen
+            # because check_territory_maintenance should have killed the region
+            # But handle it gracefully just in case
+            self.gold = 0
+            return []
 
 
 @dataclass
@@ -125,6 +163,83 @@ class Player:
             region.gold = min(total_old_gold, region.max_gold)
 
             self.regions.append(region)
+
+    def check_castle_requirement(self) -> list[dict]:
+        """Check castle requirement for all regions (Slay rules).
+
+        Each territory MUST have at least one castle to survive.
+        If a territory has no castle, it dies immediately.
+
+        Returns list of territory deaths: [{"region_size": int, "hexes": [(q,r)], "reason": str}]
+        """
+        deaths = []
+        regions_to_kill = []
+
+        for region in self.regions:
+            if not region.has_castle():
+                # Territory dies - all hexes become neutral, units removed
+                hex_coords = [(h.q, h.r) for h in region.hexes]
+                deaths.append({
+                    "region_size": len(region.hexes),
+                    "hexes": hex_coords,
+                    "reason": "no_castle"
+                })
+                regions_to_kill.append(region)
+
+                # Kill the territory
+                for h in region.hexes:
+                    if h.unit:
+                        h.terrain = Terrain.GRAVE
+                        h.unit = None
+                    h.owner = None
+
+        # Remove dead regions
+        for region in regions_to_kill:
+            self.regions.remove(region)
+
+        return deaths
+
+    def check_territory_maintenance(self) -> list[dict]:
+        """Check if territories can afford maintenance (Slay rules).
+
+        Each territory has a maintenance cost based on its size: (hexes - 1) gold.
+        This is IN ADDITION to unit upkeep costs.
+        If a territory cannot afford maintenance + upkeep, it dies.
+
+        Returns list of territory deaths: [{"region_size": int, "hexes": [(q,r)], "reason": str, "needed": int, "had": int}]
+        """
+        deaths = []
+        regions_to_kill = []
+
+        for region in self.regions:
+            territory_cost = region.get_territory_maintenance()
+            unit_upkeep = region.get_upkeep()
+            total_cost = territory_cost + unit_upkeep
+
+            if region.gold < total_cost:
+                # Territory dies - cannot afford maintenance
+                hex_coords = [(h.q, h.r) for h in region.hexes]
+                deaths.append({
+                    "region_size": len(region.hexes),
+                    "hexes": hex_coords,
+                    "reason": "insufficient_gold",
+                    "needed": total_cost,
+                    "had": region.gold
+                })
+                regions_to_kill.append(region)
+
+                # Kill the territory
+                for h in region.hexes:
+                    if h.unit:
+                        h.terrain = Terrain.GRAVE
+                        h.unit = None
+                    h.owner = None
+
+        # Remove dead regions
+        for region in regions_to_kill:
+            self.regions.remove(region)
+
+        return deaths
 
     def kill_isolated_units(self) -> list[tuple]:
         """Kill units in regions without capital (isolated hexes).
@@ -204,9 +319,11 @@ class Player:
                 {
                     "hex_count": len(r.hexes),
                     "has_capital": r.has_capital,
+                    "has_castle": r.has_castle(),
                     "gold": r.gold,
                     "income": r.income,
                     "upkeep": r.get_upkeep(),
+                    "territory_maintenance": r.get_territory_maintenance(),
                 }
                 for r in self.regions
             ]
