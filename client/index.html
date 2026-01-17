@@ -119,6 +119,54 @@
     <div id="app">
         <header>
             <h1>Slay AI</h1>
+
+            <!-- Mobile: simplified controls -->
+            <div class="mobile-controls">
+                <button id="btn-menu-toggle" class="btn-icon" aria-label="Menu">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                </button>
+                <button id="btn-play-mobile" class="play-center" disabled>
+                    <span class="play-icon">▶</span>
+                    <span class="turn-nav-mobile">-/-</span>
+                </button>
+                <button id="btn-panel-toggle-mobile" class="btn-icon" aria-label="Stats">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mobile menu drawer -->
+            <div id="mobile-menu" class="mobile-menu">
+                <div class="mobile-menu-content">
+                    <div class="mobile-menu-section">
+                        <button id="btn-new-mobile">New Game</button>
+                        <button id="btn-quick-ai-mobile">Quick AI Battle</button>
+                        <button id="btn-load-mobile">Load Game</button>
+                    </div>
+                    <div class="mobile-menu-section">
+                        <div class="mobile-nav-controls">
+                            <button id="btn-first-mobile" disabled>◀◀</button>
+                            <button id="btn-prev-mobile" disabled>◀</button>
+                            <button id="btn-step-mobile" disabled>▶</button>
+                            <button id="btn-last-mobile" disabled>▶▶</button>
+                        </div>
+                        <div class="speed-toggle">
+                            <button class="speed-btn" data-speed="fast">🐇</button>
+                            <button class="speed-btn active" data-speed="normal">🚶</button>
+                            <button class="speed-btn" data-speed="slow">🐢</button>
+                        </div>
+                    </div>
+                    <div class="mobile-menu-section">
+                        <a href="/static/rules.html" target="_blank" class="menu-link">📖 Game Rules</a>
+                        <button id="btn-theme-mobile">🌙 Toggle Theme</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop controls -->
             <div id="controls">
                 <a href="/static/rules.html" target="_blank" class="btn-icon" title="Game Rules">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">

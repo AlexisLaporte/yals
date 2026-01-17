@@ -43,11 +43,19 @@ class GameUI {
         this.currentPlayerId = null;
         this.humanPlayer = null;
 
+        // Mobile elements
+        this.mobileMenu = document.getElementById('mobile-menu');
+        this.btnMenuToggle = document.getElementById('btn-menu-toggle');
+        this.btnPlayMobile = document.getElementById('btn-play-mobile');
+        this.btnPanelToggleMobile = document.getElementById('btn-panel-toggle-mobile');
+        this.turnNavMobile = document.querySelector('.turn-nav-mobile');
+
         // Initialize toggles
         this.initPanelToggle();
         this.initTabSwitching();
         this.initThemeToggle();
         this.initRegionPanelDrag();
+        this.initMobileMenu();
     }
 
     initPanelToggle() {
@@ -168,6 +176,87 @@ class GameUI {
         document.addEventListener('mouseup', onMouseUp);
     }
 
+    initMobileMenu() {
+        if (!this.mobileMenu || !this.btnMenuToggle) return;
+
+        // Toggle menu
+        this.btnMenuToggle.addEventListener('click', () => {
+            this.mobileMenu.classList.toggle('active');
+        });
+
+        // Close menu on overlay click
+        this.mobileMenu.addEventListener('click', (e) => {
+            if (e.target === this.mobileMenu) {
+                this.mobileMenu.classList.remove('active');
+            }
+        });
+
+        // Mobile panel toggle (bottom sheet)
+        if (this.btnPanelToggleMobile && this.rightPanel) {
+            this.btnPanelToggleMobile.addEventListener('click', () => {
+                this.rightPanel.classList.toggle('collapsed');
+            });
+        }
+
+        // Sync mobile buttons with desktop buttons
+        const syncButton = (mobileId, desktopId) => {
+            const mobileBtn = document.getElementById(mobileId);
+            const desktopBtn = document.getElementById(desktopId);
+            if (mobileBtn && desktopBtn) {
+                mobileBtn.addEventListener('click', () => {
+                    desktopBtn.click();
+                    this.mobileMenu.classList.remove('active');
+                });
+            }
+        };
+
+        // Game controls
+        syncButton('btn-new-mobile', 'btn-new-custom');
+        syncButton('btn-quick-ai-mobile', 'btn-quick-ai');
+        syncButton('btn-load-mobile', 'btn-load');
+
+        // Playback controls
+        syncButton('btn-first-mobile', 'btn-first');
+        syncButton('btn-prev-mobile', 'btn-prev');
+        syncButton('btn-step-mobile', 'btn-step');
+        syncButton('btn-last-mobile', 'btn-last');
+
+        // Theme toggle
+        const btnThemeMobile = document.getElementById('btn-theme-mobile');
+        const btnTheme = document.getElementById('btn-theme');
+        if (btnThemeMobile && btnTheme) {
+            btnThemeMobile.addEventListener('click', () => {
+                btnTheme.click();
+                this.mobileMenu.classList.remove('active');
+            });
+        }
+
+        // Mobile play button syncs with desktop
+        if (this.btnPlayMobile && this.btnPlayAction) {
+            this.btnPlayMobile.addEventListener('click', () => {
+                this.btnPlayAction.click();
+            });
+        }
+
+        // Sync speed buttons in mobile menu
+        const mobileSpeedBtns = this.mobileMenu.querySelectorAll('.speed-btn');
+        const desktopSpeedBtns = document.querySelectorAll('#controls .speed-btn');
+        mobileSpeedBtns.forEach(mobileBtn => {
+            mobileBtn.addEventListener('click', () => {
+                const speed = mobileBtn.dataset.speed;
+                // Find and click matching desktop button
+                desktopSpeedBtns.forEach(desktopBtn => {
+                    if (desktopBtn.dataset.speed === speed) {
+                        desktopBtn.click();
+                    }
+                });
+                // Update mobile active state
+                mobileSpeedBtns.forEach(b => b.classList.remove('active'));
+                mobileBtn.classList.add('active');
+            });
+        });
+    }
+
     setHumanPlayer(humanPlayer) {
         this.humanPlayer = humanPlayer;
     }
@@ -185,48 +274,55 @@ class GameUI {
 
     // Set Play button state: 'play', 'pause', or 'end_turn'
     setPlayButtonState(state) {
-        if (!this.btnPlayAction) return;
+        const buttons = [this.btnPlayAction, this.btnPlayMobile].filter(Boolean);
 
-        this.btnPlayAction.classList.remove('end-turn', 'paused');
-        this.btnPlayAction.disabled = false;
+        buttons.forEach(btn => {
+            btn.classList.remove('end-turn', 'paused');
+            btn.disabled = false;
+            const icon = btn.querySelector('.play-icon');
 
-        switch (state) {
-            case 'play':
-                if (this.playIcon) this.playIcon.textContent = '▶';
-                break;
-            case 'pause':
-                if (this.playIcon) this.playIcon.textContent = '⏸';
-                this.btnPlayAction.classList.add('paused');
-                break;
-            case 'end_turn':
-                if (this.playIcon) this.playIcon.textContent = '✓';
-                this.btnPlayAction.classList.add('end-turn');
-                break;
-            case 'disabled':
-                if (this.playIcon) this.playIcon.textContent = '▶';
-                this.btnPlayAction.disabled = true;
-                break;
-        }
+            switch (state) {
+                case 'play':
+                    if (icon) icon.textContent = '▶';
+                    break;
+                case 'pause':
+                    if (icon) icon.textContent = '⏸';
+                    btn.classList.add('paused');
+                    break;
+                case 'end_turn':
+                    if (icon) icon.textContent = '✓';
+                    btn.classList.add('end-turn');
+                    break;
+                case 'disabled':
+                    if (icon) icon.textContent = '▶';
+                    btn.disabled = true;
+                    break;
+            }
+        });
     }
 
     // Update playback controls display
     setHistoryPosition(current, max, isAtEnd, playerName = null, playerId = null, gameExists = true) {
-        if (this.turnNav) {
-            let text = max > 0 ? `${current}/${max}` : '-/-';
-            if (playerName && max > 0) {
-                text = `${playerName} ${current}/${max}`;
-            } else if (playerName) {
-                text = playerName;
+        // Update turn nav text (desktop and mobile)
+        let text = max > 0 ? `${current}/${max}` : '-/-';
+        if (playerName && max > 0) {
+            text = `${playerName} ${current}/${max}`;
+        } else if (playerName) {
+            text = playerName;
+        }
+
+        if (this.turnNav) this.turnNav.textContent = text;
+        if (this.turnNavMobile) this.turnNavMobile.textContent = text;
+
+        // Color the center buttons based on current player
+        const buttons = [this.btnPlayAction, this.btnPlayMobile].filter(Boolean);
+        buttons.forEach(btn => {
+            if (playerId !== null && this.colors[playerId]) {
+                btn.style.setProperty('--player-bg', this.colors[playerId]);
             }
-            this.turnNav.textContent = text;
-        }
+        });
 
-        // Color the center button based on current player
-        if (this.btnPlayAction && playerId !== null && this.colors[playerId]) {
-            this.btnPlayAction.style.setProperty('--player-bg', this.colors[playerId]);
-        }
-
-        // Enable/disable nav buttons
+        // Enable/disable nav buttons (desktop)
         const hasHistory = max > 0;
         const canGoBack = current > 1;
 
@@ -241,6 +337,17 @@ class GameUI {
             this.btnLast.disabled = !gameExists;
             this.btnLast.title = 'Run to end of game';
         }
+
+        // Sync mobile nav buttons
+        const btnFirstMobile = document.getElementById('btn-first-mobile');
+        const btnPrevMobile = document.getElementById('btn-prev-mobile');
+        const btnStepMobile = document.getElementById('btn-step-mobile');
+        const btnLastMobile = document.getElementById('btn-last-mobile');
+
+        if (btnFirstMobile) btnFirstMobile.disabled = !gameExists || !hasHistory || !canGoBack;
+        if (btnPrevMobile) btnPrevMobile.disabled = !gameExists || !hasHistory || !canGoBack;
+        if (btnStepMobile) btnStepMobile.disabled = !gameExists;
+        if (btnLastMobile) btnLastMobile.disabled = !gameExists;
     }
 
     // Set controls to loading state (during turn execution)

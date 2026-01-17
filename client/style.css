@@ -1381,6 +1381,99 @@ button.secondary:hover {
    RESPONSIVE DESIGN
    ======================================== */
 
+/* Mobile controls - hidden by default */
+.mobile-controls {
+    display: none;
+}
+
+.mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+}
+
+.mobile-menu.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mobile-menu-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100%;
+    background: var(--bg-secondary);
+    padding: 1rem;
+    transform: translateX(-100%);
+    transition: transform var(--transition-slow) var(--ease-out-expo);
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+}
+
+.mobile-menu.active .mobile-menu-content {
+    transform: translateX(0);
+}
+
+.mobile-menu-section {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mobile-menu-section:last-child {
+    border-bottom: none;
+}
+
+.mobile-menu-section button,
+.mobile-menu-section .menu-link {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    transition: background var(--transition-fast);
+}
+
+.mobile-menu-section button:hover,
+.mobile-menu-section .menu-link:hover {
+    background: var(--accent);
+    color: white;
+}
+
+.mobile-nav-controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.mobile-nav-controls button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 1rem;
+}
+
+.mobile-menu-section .speed-toggle {
+    margin: 0.5rem 0 0 0;
+    width: 100%;
+}
+
 /* Tablet (< 1024px) */
 @media (max-width: 1024px) {
     :root {
@@ -1414,280 +1507,377 @@ button.secondary:hover {
     }
 }
 
-/* Mobile landscape & small tablets (< 768px) */
+/* Mobile (< 768px) */
 @media (max-width: 768px) {
-    :root {
-        --header-height: auto;
-        --right-panel-width: 100vw;
-        --status-height: auto;
-    }
-
-    /* Header adjustments */
-    header {
-        flex-direction: column;
-        padding: 0.75rem 1rem;
+    /* Show mobile controls, hide desktop */
+    .mobile-controls {
+        display: flex;
+        align-items: center;
         gap: 0.75rem;
-        align-items: stretch;
+        flex: 1;
+        justify-content: space-between;
     }
 
-    header h1 {
-        text-align: center;
-        font-size: 1.4rem;
+    .mobile-menu {
+        display: block;
     }
 
     #controls {
-        flex-wrap: wrap;
-        width: 100%;
-        justify-content: center;
-        gap: 0.5rem;
+        display: none;
     }
 
-    /* Full-screen right panel on mobile */
-    #right-panel {
-        position: fixed;
-        top: 0;
-        right: 0;
-        height: 100vh;
-        width: 100vw;
-        z-index: 1000;
-        transform: translateX(100%);
-        transition: transform var(--transition-slow);
-        box-shadow: none;
-    }
-
-    #right-panel:not(.collapsed) {
-        transform: translateX(0);
-        box-shadow: var(--shadow-xl);
-    }
-
-    .panel-toggle {
-        left: auto;
-        right: calc(100vw - 32px);
-        border-radius: 8px 0 0 8px;
-        width: 48px;
-        height: 56px;
-        background: var(--accent);
-        color: white;
-        box-shadow: var(--shadow-md);
-    }
-
-    #right-panel:not(.collapsed) .panel-toggle {
-        right: auto;
-        left: 16px;
-        top: 16px;
-        transform: none;
-        border-radius: 8px;
-    }
-
-    /* Full-screen modals */
-    .modal-content {
-        width: 95%;
-        max-width: 95vw;
-        max-height: 90vh;
-        padding: 1.5rem;
-    }
-
-    .modal-content h2 {
-        font-size: 1.2rem;
-    }
-
-    /* Larger touch targets */
-    button {
-        min-height: 44px;
-        padding: 0.6rem 1rem;
-    }
-
-    .btn-icon {
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    /* Playback controls */
-    .playback-controls {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .playback-controls button {
-        min-width: 40px;
-        min-height: 40px;
-    }
-
-    .playback-controls .play-center {
-        min-width: 90px;
-    }
-
-    /* Speed toggle */
-    .speed-toggle {
-        margin-left: 0;
-        margin-top: 0.5rem;
-        width: 100%;
-        justify-content: center;
-    }
-
-    .speed-toggle .speed-btn {
-        flex: 1;
-        min-height: 40px;
-    }
-
-    /* Game area */
-    #game-area {
-        padding: 0.75rem;
-    }
-
-    #board {
-        min-height: 200px;
-    }
-
-    /* Region panel adjustments */
-    #region-panel {
-        top: 10px;
-        left: 10px;
-        width: calc(100vw - 20px);
-        max-width: 200px;
-    }
-
-    /* Status bar */
-    #status-bar {
-        flex-wrap: wrap;
-        padding: 0.5rem 1rem;
-        gap: 0.5rem 1rem;
-        font-size: 0.8rem;
-    }
-
-    #connection-status {
-        margin-left: 0;
-        width: 100%;
-        text-align: center;
-    }
-
-    /* Setup modal adjustments */
-    .player-slot {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .player-slot .player-label {
-        width: 100%;
-        margin-bottom: 0.25rem;
-    }
-
-    .player-slot .player-type,
-    .player-slot .ai-difficulty {
-        flex: 1;
-        min-width: 100px;
-    }
-
-    .map-options {
-        flex-direction: column;
+    /* Compact header */
+    header {
+        padding: 0.5rem 0.75rem;
+        flex-direction: row;
+        align-items: center;
         gap: 0.75rem;
     }
 
-    .map-options label {
+    header h1 {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    /* Mobile play button */
+    .mobile-controls .play-center {
+        flex: 1;
+        max-width: 140px;
+        min-height: 40px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .mobile-controls .btn-icon {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0.4rem;
+        flex-shrink: 0;
+    }
+
+    /* Game area - maximize space */
+    #game-area {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+
+    #board {
+        min-height: 0;
+        flex: 1;
+        border-radius: 8px;
+    }
+
+    /* Right panel as bottom sheet */
+    #right-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
         width: 100%;
+        height: 60vh;
+        max-height: 60vh;
+        border-left: none;
+        border-top: 2px solid var(--border-color);
+        border-radius: 16px 16px 0 0;
+        transform: translateY(calc(100% - 0px));
+        transition: transform var(--transition-slow) var(--ease-out-expo);
+        z-index: 1000;
+    }
+
+    #right-panel:not(.collapsed) {
+        transform: translateY(0);
+    }
+
+    #right-panel .panel-toggle {
+        display: none;
+    }
+
+    /* Bottom sheet drag handle */
+    #right-panel::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+    }
+
+    .panel-tabs {
+        padding-top: 1rem;
+    }
+
+    /* Status bar compact */
+    #status-bar {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.75rem;
+        gap: 0.75rem;
+    }
+
+    #connection-status {
+        margin-left: auto;
+    }
+
+    /* Region panel */
+    #region-panel {
+        top: 8px;
+        left: 8px;
+        width: auto;
+        max-width: calc(100vw - 16px);
+    }
+
+    /* Modals */
+    .modal-content {
+        width: 95%;
+        max-height: 85vh;
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+
+    .modal-content h2 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .setup-section h3 {
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .player-slot {
+        padding: 0.4rem;
+        gap: 0.4rem;
+        flex-wrap: nowrap;
+    }
+
+    .player-slot .player-color {
+        width: 16px;
+        height: 16px;
+    }
+
+    .player-slot .player-label {
+        width: auto;
+        font-size: 0.8rem;
+        min-width: 50px;
+    }
+
+    .player-slot select {
+        padding: 0.3rem 0.4rem;
+        font-size: 0.8rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .map-options {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .map-options label {
+        font-size: 0.85rem;
+        flex: 1;
+        min-width: 120px;
     }
 
     .map-options select,
     .map-options input {
-        flex: 1;
+        padding: 0.35rem 0.4rem;
+        font-size: 0.85rem;
     }
 
     .map-preview-section {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: center;
+        padding: 0.5rem;
+        gap: 0.75rem;
     }
 
     #setup-map-preview {
-        width: 100%;
-        height: 150px;
+        width: 120px;
+        height: 90px;
+        flex-shrink: 0;
+    }
+
+    #btn-change-map {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
     }
 
     .modal-buttons {
-        flex-direction: column;
+        flex-direction: row;
+        gap: 0.75rem;
+        margin-top: 1rem;
     }
 
     .modal-buttons button {
-        width: 100%;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
     }
 
-    /* Dropdown improvements */
-    .dropdown-content {
-        left: auto;
-        right: 0;
-        min-width: 180px;
-    }
-
-    /* Map overlay button */
+    /* Map overlay */
     .map-overlay-btn {
-        bottom: 1rem;
-        right: 1rem;
-        font-size: 0.85rem;
+        bottom: 0.75rem;
+        right: 0.75rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    /* Turn indicator */
+    #turn-indicator .turn-banner {
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
     }
 }
 
 /* Small mobile (< 480px) */
 @media (max-width: 480px) {
     header h1 {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
-    button {
-        font-size: 0.85rem;
+    .mobile-controls .play-center {
+        max-width: 120px;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.8rem;
     }
 
-    .playback-controls {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .playback-controls .play-center {
-        width: 100%;
-        order: -1;
-    }
-
-    .speed-toggle {
-        width: 100%;
-        order: 1;
+    .mobile-controls .btn-icon {
+        min-width: 36px;
+        min-height: 36px;
     }
 
     #game-area {
-        padding: 0.5rem;
+        padding: 0.25rem;
     }
 
     #board {
-        border-radius: 8px;
+        border-radius: 6px;
+        border-width: 1px;
     }
 
-    .panel-tabs {
-        font-size: 0.75rem;
+    /* Bottom sheet smaller */
+    #right-panel {
+        height: 50vh;
+        max-height: 50vh;
     }
 
     .panel-tab {
-        padding: 0.5rem 0.3rem;
-        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+        font-size: 0.7rem;
     }
 
+    /* Compact region panel */
     #region-panel {
-        max-width: calc(100vw - 20px);
+        width: 160px;
+    }
+
+    .region-header {
+        padding: 0.3rem 0.5rem;
     }
 
     .region-header h3 {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+    }
+
+    .region-stats {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.75rem;
+        gap: 0.5rem;
     }
 
     .buy-buttons {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem;
     }
 
-    /* Compact log entries */
-    .log-entry {
-        padding: 0.5rem 0.6rem;
-        font-size: 0.8rem;
+    .buy-btn {
+        padding: 0.25rem 0.3rem;
     }
 
-    /* Compact stats */
-    .metric-btn {
+    .buy-btn .unit-name {
         font-size: 0.65rem;
-        padding: 0.25rem 0.4rem;
+    }
+
+    /* Log entries */
+    .log-entry {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* Stats */
+    .metric-btn {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.35rem;
+    }
+
+    #stats-chart {
+        min-height: 120px;
+    }
+
+    /* Status bar */
+    #status-bar {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    /* Modal adjustments */
+    .player-slot .player-label {
+        display: none;
+    }
+
+    .player-slot .player-color {
+        width: 20px;
+        height: 20px;
+    }
+
+    .modal-content {
+        padding: 1rem;
+    }
+
+    .modal-content h2 {
+        font-size: 1rem;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    header {
+        padding: 0.35rem 0.75rem;
+    }
+
+    header h1 {
+        font-size: 0.95rem;
+    }
+
+    #game-area {
+        padding: 0.25rem;
+    }
+
+    #right-panel {
+        height: 70vh;
+        max-height: 70vh;
+    }
+
+    #status-bar {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .modal-content {
+        max-height: 95vh;
+        padding: 0.75rem;
+    }
+
+    .setup-section {
+        margin-bottom: 0.75rem;
+    }
+
+    .player-slot {
+        margin-bottom: 0.25rem;
     }
 }
