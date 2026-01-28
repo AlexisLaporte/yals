@@ -56,21 +56,38 @@ class GameUI {
         this.initThemeToggle();
         this.initRegionPanelDrag();
         this.initMobileMenu();
+        this.initBottomSheetDrag();
     }
 
     initPanelToggle() {
         if (!this.panelToggle || !this.rightPanel) return;
 
-        // Restore state from localStorage
-        const collapsed = localStorage.getItem('rightPanelCollapsed') === 'true';
-        if (collapsed) {
+        const isMobile = () => window.innerWidth < 768;
+
+        // Restore state from localStorage (desktop uses collapsed, mobile uses expanded)
+        const savedCollapsed = localStorage.getItem('rightPanelCollapsed') === 'true';
+        if (!isMobile() && savedCollapsed) {
             this.rightPanel.classList.add('collapsed');
         }
 
-        // Toggle handler
+        // Desktop toggle handler
         this.panelToggle.addEventListener('click', () => {
-            this.rightPanel.classList.toggle('collapsed');
-            localStorage.setItem('rightPanelCollapsed', this.rightPanel.classList.contains('collapsed'));
+            if (!isMobile()) {
+                this.rightPanel.classList.toggle('collapsed');
+                localStorage.setItem('rightPanelCollapsed', this.rightPanel.classList.contains('collapsed'));
+            }
+        });
+
+        // Handle window resize - switch between mobile and desktop modes
+        let lastMobileState = isMobile();
+        window.addEventListener('resize', () => {
+            const nowMobile = isMobile();
+            if (nowMobile !== lastMobileState) {
+                // Reset panel state when switching modes
+                this.rightPanel.classList.remove('collapsed', 'expanded');
+                this.rightPanel.style.transform = '';
+                lastMobileState = nowMobile;
+            }
         });
     }
 
@@ -147,33 +164,169 @@ class GameUI {
         let isDragging = false;
         let startX, startY, startLeft, startTop;
 
-        const onMouseDown = (e) => {
+        // Get position from event (mouse or touch)
+        const getEventPosition = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const onDragStart = (e) => {
             if (!e.target.closest('.region-header')) return;
             if (e.target.closest('.close-btn')) return;
 
             isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            const pos = getEventPosition(e);
+            startX = pos.x;
+            startY = pos.y;
             startLeft = panel.offsetLeft;
             startTop = panel.offsetTop;
-            e.preventDefault();
+
+            if (e.cancelable) e.preventDefault();
         };
 
-        const onMouseMove = (e) => {
+        const onDragMove = (e) => {
             if (!isDragging) return;
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            panel.style.left = (startLeft + dx) + 'px';
-            panel.style.top = (startTop + dy) + 'px';
+            const pos = getEventPosition(e);
+            const dx = pos.x - startX;
+            const dy = pos.y - startY;
+
+            // Keep panel within viewport bounds
+            const maxLeft = window.innerWidth - panel.offsetWidth - 8;
+            const maxTop = window.innerHeight - panel.offsetHeight - 8;
+            const newLeft = Math.max(8, Math.min(maxLeft, startLeft + dx));
+            const newTop = Math.max(8, Math.min(maxTop, startTop + dy));
+
+            panel.style.left = newLeft + 'px';
+            panel.style.top = newTop + 'px';
         };
 
-        const onMouseUp = () => {
+        const onDragEnd = () => {
             isDragging = false;
         };
 
-        panel.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+        // Mouse events
+        panel.addEventListener('mousedown', onDragStart);
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+
+        // Touch events
+        panel.addEventListener('touchstart', onDragStart, { passive: false });
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('touchend', onDragEnd);
+        document.addEventListener('touchcancel', onDragEnd);
+    }
+
+    initBottomSheetDrag() {
+        if (!this.rightPanel) return;
+
+        const handle = this.rightPanel.querySelector('.bottom-sheet-handle');
+        if (!handle) return;
+
+        let isDragging = false;
+        let startY = 0;
+        let startTransform = 0;
+        let currentY = 0;
+
+        const isMobile = () => window.innerWidth < 768;
+
+        // Get the current translateY value
+        const getCurrentTranslateY = () => {
+            const style = window.getComputedStyle(this.rightPanel);
+            const matrix = new DOMMatrixReadOnly(style.transform);
+            return matrix.m42; // This is the translateY value
+        };
+
+        // Calculate the collapsed and expanded positions
+        const getPositions = () => {
+            const panelHeight = this.rightPanel.offsetHeight;
+            const peekHeight = 60; // How much shows when collapsed
+            return {
+                collapsed: panelHeight - peekHeight,
+                expanded: 0
+            };
+        };
+
+        const onDragStart = (e) => {
+            if (!isMobile()) return;
+
+            isDragging = true;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            startTransform = getCurrentTranslateY();
+
+            this.rightPanel.style.transition = 'none';
+            handle.style.cursor = 'grabbing';
+        };
+
+        const onDragMove = (e) => {
+            if (!isDragging || !isMobile()) return;
+
+            currentY = e.touches ? e.touches[0].clientY : e.clientY;
+            const deltaY = currentY - startY;
+            const positions = getPositions();
+
+            // Clamp the new position
+            let newTransform = startTransform + deltaY;
+            newTransform = Math.max(positions.expanded, Math.min(positions.collapsed, newTransform));
+
+            this.rightPanel.style.transform = `translateY(${newTransform}px)`;
+        };
+
+        const onDragEnd = () => {
+            if (!isDragging || !isMobile()) return;
+
+            isDragging = false;
+            handle.style.cursor = 'grab';
+
+            // Restore transition
+            this.rightPanel.style.transition = '';
+
+            const positions = getPositions();
+            const currentTranslate = getCurrentTranslateY();
+            const threshold = (positions.collapsed - positions.expanded) / 2;
+
+            // Snap to expanded or collapsed based on position
+            if (currentTranslate < threshold) {
+                this.rightPanel.classList.add('expanded');
+            } else {
+                this.rightPanel.classList.remove('expanded');
+            }
+
+            // Remove inline transform to let CSS take over
+            this.rightPanel.style.transform = '';
+        };
+
+        // Touch events on handle
+        handle.addEventListener('touchstart', onDragStart, { passive: true });
+        document.addEventListener('touchmove', onDragMove, { passive: true });
+        document.addEventListener('touchend', onDragEnd);
+        document.addEventListener('touchcancel', onDragEnd);
+
+        // Mouse events for testing
+        handle.addEventListener('mousedown', onDragStart);
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+
+        // Click on handle toggles expanded state
+        handle.addEventListener('click', (e) => {
+            if (!isMobile()) return;
+            // Only toggle if it wasn't a drag
+            if (Math.abs(currentY - startY) < 10 || currentY === 0) {
+                this.rightPanel.classList.toggle('expanded');
+            }
+            currentY = 0;
+        });
+
+        // Also allow the panel tabs to expand on tap
+        const panelTabs = this.rightPanel.querySelector('.panel-tabs');
+        if (panelTabs) {
+            panelTabs.addEventListener('click', () => {
+                if (isMobile() && !this.rightPanel.classList.contains('expanded')) {
+                    this.rightPanel.classList.add('expanded');
+                }
+            });
+        }
     }
 
     initMobileMenu() {
@@ -194,7 +347,7 @@ class GameUI {
         // Mobile panel toggle (bottom sheet)
         if (this.btnPanelToggleMobile && this.rightPanel) {
             this.btnPanelToggleMobile.addEventListener('click', () => {
-                this.rightPanel.classList.toggle('collapsed');
+                this.rightPanel.classList.toggle('expanded');
             });
         }
 
