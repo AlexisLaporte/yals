@@ -50,18 +50,49 @@ class GameState:
         players = [Player(id=i) for i in range(num_players)]
         return cls(board=board, players=players)
 
-    def start_turn(self) -> list[dict]:
+    def start_turn(self) -> dict:
         """Called at the start of a player's turn.
 
-        Returns list of territory deaths (units that died from being isolated).
+        Returns dict with:
+        - castle_deaths: territories that died from missing castle
+        - maintenance_deaths: territories that died from insufficient gold
+        - isolated_deaths: units that died from being in isolated territories
         """
-        # Kill isolated units for ALL players at start of each turn (Slay rules)
-        all_territory_deaths = []
+        # SLAY CASTLE RULES - Check ALL players at start of each turn
+        castle_deaths = []
+        maintenance_deaths = []
+        isolated_deaths = []
+
         for p in self.players:
             if not p.eliminated:
+                # 1. Check castle requirement (territories without castle die)
+                castle_check = p.check_castle_requirement()
+                if castle_check:
+                    for death in castle_check:
+                        castle_deaths.append({
+                            "player": p.id,
+                            "region_size": death["region_size"],
+                            "hexes": death["hexes"],
+                            "reason": "no_castle"
+                        })
+
+                # 2. Check territory maintenance (territories that can't afford it die)
+                maintenance_check = p.check_territory_maintenance()
+                if maintenance_check:
+                    for death in maintenance_check:
+                        maintenance_deaths.append({
+                            "player": p.id,
+                            "region_size": death["region_size"],
+                            "hexes": death["hexes"],
+                            "reason": "insufficient_gold",
+                            "needed": death["needed"],
+                            "had": death["had"]
+                        })
+
+                # 3. Kill isolated units (single hex territories without capital)
                 deaths = p.kill_isolated_units()
                 for h, unit_type in deaths:
-                    all_territory_deaths.append({
+                    isolated_deaths.append({
                         "player": p.id,
                         "hex": [h.q, h.r],
                         "unit": unit_type
@@ -75,7 +106,11 @@ class GameState:
         self.rules.reset_units_for_turn(player.id)
         self.actions_this_turn = []
 
-        return all_territory_deaths
+        return {
+            "castle_deaths": castle_deaths,
+            "maintenance_deaths": maintenance_deaths,
+            "isolated_deaths": isolated_deaths
+        }
 
     def _grow_trees(self, player_id: int) -> list[Hex]:
         """Grow trees in player's territory (Slay rules).

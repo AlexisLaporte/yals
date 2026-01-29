@@ -87,8 +87,8 @@ class GameOrchestrator:
         controller = self.current_controller
         player = self.game_state.current_player
 
-        # Start the turn - returns any territory deaths from isolated units
-        territory_deaths = self.game_state.start_turn()
+        # Start the turn - returns territory deaths (castle, maintenance, isolated)
+        death_events = self.game_state.start_turn()
 
         if self.history:
             self.history.record_action(
@@ -109,8 +109,9 @@ class GameOrchestrator:
                 controller._game_state = self.game_state
                 controller._actions_this_turn = []
             result = {"status": "waiting", "player": player.id}
-            if territory_deaths:
-                result["territory_deaths"] = territory_deaths
+            # Include death events from castle/maintenance/isolated checks
+            if any(death_events.values()):
+                result["death_events"] = death_events
             return result
 
         # AI player - run turn automatically
@@ -128,8 +129,9 @@ class GameOrchestrator:
 
         actions = await controller.play_turn(self.game_state, record_action)
         result = self._check_game_status(len(actions))
-        if territory_deaths:
-            result["territory_deaths"] = territory_deaths
+        # Include death events from castle/maintenance/isolated checks
+        if any(death_events.values()):
+            result["death_events"] = death_events
         return result
 
     async def submit_human_action(self, action: dict) -> dict:
