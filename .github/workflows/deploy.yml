@@ -16,6 +16,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/yals
-            git pull origin master
+            git fetch origin master
+            git reset --hard origin/master
             ./venv/bin/pip install -q -r requirements.txt
             systemctl restart yals
