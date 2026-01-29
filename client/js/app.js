@@ -749,14 +749,17 @@ let humanPlayer = null;
     // Connect WebSocket
     socket.connect();
 
-    // Auto-load game on startup
+    // Auto-load game on startup or show setup modal
     setTimeout(async () => {
         if (!gameExists) {
             const urlGameId = getGameIdFromUrl();
+            let shouldShowSetup = true;
+
             try {
                 if (urlGameId) {
                     await loadGame(urlGameId);
                     console.log('Loaded game from URL:', urlGameId);
+                    shouldShowSetup = false;
                 } else {
                     const response = await fetch('/api/game/latest');
                     const data = await response.json();
@@ -764,10 +767,17 @@ let humanPlayer = null;
                         updateGameUrl(data.game_id);
                         statsGraph.fetchAndUpdate();
                         console.log('Auto-loaded last game at turn', data.turn);
+                        shouldShowSetup = false;
                     }
                 }
             } catch (e) {
-                // No game to load, that's fine
+                // No game to load - will show setup modal
+            }
+
+            // If no game loaded, show setup modal to create a new one
+            if (shouldShowSetup) {
+                await setupModal.present();
+                updateMapPreview();
             }
         }
     }, 500);
