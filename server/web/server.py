@@ -110,19 +110,27 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def get_index():
-        """Serve the main page."""
+        """Serve the homepage."""
         index_path = client_path / "index.html"
         if index_path.exists():
             return FileResponse(index_path)
         return HTMLResponse("<h1>Slay AI</h1><p>Client not found</p>")
 
+    @app.get("/game")
+    async def get_game():
+        """Serve the game page."""
+        game_path = client_path / "game.html"
+        if game_path.exists():
+            return FileResponse(game_path)
+        return HTMLResponse("<h1>Slay AI</h1><p>Game not found</p>")
+
     @app.get("/game/{game_id}")
     async def get_game_page(game_id: int):
-        """Serve the main page for a specific game (client handles loading)."""
-        index_path = client_path / "index.html"
-        if index_path.exists():
-            return FileResponse(index_path)
-        return HTMLResponse("<h1>Slay AI</h1><p>Client not found</p>")
+        """Serve the game page for a specific game (client handles loading)."""
+        game_path = client_path / "game.html"
+        if game_path.exists():
+            return FileResponse(game_path)
+        return HTMLResponse("<h1>Slay AI</h1><p>Game not found</p>")
 
     # ==================== Game Creation ====================
 
