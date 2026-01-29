@@ -2,217 +2,358 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Slay AI</title>
     <link rel="icon" type="image/svg+xml" href="/static/assets/favicon.svg">
+    <!-- Ionic CSS & JS -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css">
+    <!-- App CSS -->
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Game Setup Modal -->
-    <div id="setup-modal" class="modal">
-        <div class="modal-content">
-            <h2>New Game</h2>
+    <ion-app>
+        <!-- Side Menu -->
+        <ion-menu content-id="main-content" side="start">
+            <ion-header>
+                <ion-toolbar color="primary">
+                    <ion-title>Menu</ion-title>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content>
+                <ion-list>
+                    <ion-list-header>Game</ion-list-header>
+                    <ion-item button id="menu-new-custom">
+                        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+                        <ion-label>New Game...</ion-label>
+                    </ion-item>
+                    <ion-item button id="menu-quick-ai">
+                        <ion-icon name="flash-outline" slot="start"></ion-icon>
+                        <ion-label>Quick AI Battle</ion-label>
+                    </ion-item>
+                    <ion-item button id="menu-load">
+                        <ion-icon name="folder-open-outline" slot="start"></ion-icon>
+                        <ion-label>Load Game</ion-label>
+                    </ion-item>
+                </ion-list>
+                <ion-list>
+                    <ion-list-header>Navigation</ion-list-header>
+                    <ion-item button id="menu-first">
+                        <ion-icon name="play-skip-back-outline" slot="start"></ion-icon>
+                        <ion-label>First Turn</ion-label>
+                    </ion-item>
+                    <ion-item button id="menu-prev">
+                        <ion-icon name="play-back-outline" slot="start"></ion-icon>
+                        <ion-label>Previous Turn</ion-label>
+                    </ion-item>
+                    <ion-item button id="menu-step">
+                        <ion-icon name="play-forward-outline" slot="start"></ion-icon>
+                        <ion-label>Next Turn</ion-label>
+                    </ion-item>
+                    <ion-item button id="menu-last">
+                        <ion-icon name="play-skip-forward-outline" slot="start"></ion-icon>
+                        <ion-label>Run to End</ion-label>
+                    </ion-item>
+                </ion-list>
+                <ion-list>
+                    <ion-list-header>Speed</ion-list-header>
+                    <ion-item>
+                        <ion-segment id="menu-speed" value="normal">
+                            <ion-segment-button value="fast">
+                                <ion-label>Fast</ion-label>
+                            </ion-segment-button>
+                            <ion-segment-button value="normal">
+                                <ion-label>Normal</ion-label>
+                            </ion-segment-button>
+                            <ion-segment-button value="slow">
+                                <ion-label>Slow</ion-label>
+                            </ion-segment-button>
+                        </ion-segment>
+                    </ion-item>
+                </ion-list>
+                <ion-list>
+                    <ion-list-header>Settings</ion-list-header>
+                    <ion-item button id="menu-theme">
+                        <ion-icon name="contrast-outline" slot="start"></ion-icon>
+                        <ion-label>Toggle Theme</ion-label>
+                    </ion-item>
+                    <ion-item button href="/static/rules.html" target="_blank">
+                        <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+                        <ion-label>Game Rules</ion-label>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+        </ion-menu>
 
-            <div class="setup-section">
-                <h3>Players</h3>
-                <div id="player-slots">
-                    <div class="player-slot" data-player="0">
-                        <span class="player-color" style="background: #E08080"></span>
-                        <span class="player-label">Red</span>
-                        <select class="player-type">
-                            <option value="human">You</option>
-                            <option value="classic_ai">Classic AI</option>
-                            <option value="llm_ai">Claude AI</option>
-                        </select>
-                        <select class="ai-difficulty">
-                            <option value="easy">Easy</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="hard">Hard</option>
-                        </select>
+        <!-- Main Content -->
+        <div class="ion-page" id="main-content">
+            <!-- Header -->
+            <ion-header>
+                <ion-toolbar color="primary">
+                    <ion-buttons slot="start">
+                        <ion-menu-button></ion-menu-button>
+                    </ion-buttons>
+                    <ion-title>Slay AI</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button id="btn-theme">
+                            <ion-icon slot="icon-only" name="sunny-outline"></ion-icon>
+                        </ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+
+            <!-- Game Area -->
+            <ion-content>
+                <div id="game-area">
+                    <canvas id="board"></canvas>
+                    <button id="btn-reroll-map" class="map-overlay-btn">Change Map</button>
+                    <div id="turn-indicator" style="display: none;">
+                        <span class="turn-banner">Your turn - tap territory or unit</span>
                     </div>
-                    <div class="player-slot" data-player="1">
-                        <span class="player-color" style="background: #80A0E0"></span>
-                        <span class="player-label">Blue</span>
-                        <select class="player-type">
-                            <option value="human">You</option>
-                            <option value="classic_ai" selected>Classic AI</option>
-                            <option value="llm_ai">Claude AI</option>
-                        </select>
-                        <select class="ai-difficulty">
-                            <option value="easy">Easy</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="hard">Hard</option>
-                        </select>
+                    <div id="region-panel" style="display: none;">
+                        <!-- Populated dynamically -->
                     </div>
-                    <div class="player-slot" data-player="2">
-                        <span class="player-color" style="background: #80C080"></span>
-                        <span class="player-label">Green</span>
-                        <select class="player-type">
-                            <option value="human">You</option>
-                            <option value="classic_ai" selected>Classic AI</option>
-                            <option value="llm_ai">Claude AI</option>
-                        </select>
-                        <select class="ai-difficulty">
-                            <option value="easy">Easy</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="hard">Hard</option>
-                        </select>
+                    <div id="placement-banner" style="display: none;"></div>
+                </div>
+            </ion-content>
+
+            <!-- Footer with Game Controls -->
+            <ion-footer>
+                <div id="game-controls">
+                    <!-- Turn indicator bar -->
+                    <div id="turn-bar">
+                        <span id="turn-label">Tour <span id="turn-number">-</span></span>
+                        <span id="player-indicator">
+                            <span class="player-dot"></span>
+                            <span id="player-name">-</span>
+                        </span>
                     </div>
-                    <div class="player-slot" data-player="3">
-                        <span class="player-color" style="background: #E0E080"></span>
-                        <span class="player-label">Yellow</span>
-                        <select class="player-type">
-                            <option value="human">You</option>
-                            <option value="classic_ai" selected>Classic AI</option>
-                            <option value="llm_ai">Claude AI</option>
-                        </select>
-                        <select class="ai-difficulty">
-                            <option value="easy">Easy</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="hard">Hard</option>
-                        </select>
+
+                    <!-- Main action area -->
+                    <div id="action-area">
+                        <!-- Shown when it's human's turn -->
+                        <button id="btn-end-turn" class="action-btn primary" style="display: none;">
+                            Terminer mon tour
+                        </button>
+
+                        <!-- Shown when AI is playing -->
+                        <div id="ai-playing" class="action-btn secondary" style="display: none;">
+                            <span class="loading-dots">AI réfléchit</span>
+                        </div>
+
+                        <!-- Shown when game is paused / waiting to start -->
+                        <button id="btn-run-game" class="action-btn secondary" style="display: none;">
+                            <ion-icon name="play"></ion-icon>
+                            Lancer la partie
+                        </button>
+
+                        <!-- Shown when game is running (auto-play) -->
+                        <button id="btn-pause-game" class="action-btn secondary" style="display: none;">
+                            <ion-icon name="pause"></ion-icon>
+                            Pause
+                        </button>
+                    </div>
+
+                    <!-- History nav (collapsed by default, shown on tap) -->
+                    <div id="history-controls">
+                        <button id="btn-first" class="history-btn" disabled>
+                            <ion-icon name="play-skip-back-outline"></ion-icon>
+                        </button>
+                        <button id="btn-prev" class="history-btn" disabled>
+                            <ion-icon name="chevron-back-outline"></ion-icon>
+                        </button>
+                        <span id="history-position">-</span>
+                        <button id="btn-step" class="history-btn" disabled>
+                            <ion-icon name="chevron-forward-outline"></ion-icon>
+                        </button>
+                        <button id="btn-last" class="history-btn" disabled>
+                            <ion-icon name="play-skip-forward-outline"></ion-icon>
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <div class="setup-section">
-                <h3>Map</h3>
-                <div class="map-options">
-                    <label>Size:
-                        <select id="map-size">
-                            <option value="15">Small (15x15)</option>
-                            <option value="20" selected>Medium (20x20)</option>
-                            <option value="25">Large (25x25)</option>
-                        </select>
-                    </label>
-                    <label>Seed:
-                        <input type="number" id="map-seed" placeholder="Random">
-                    </label>
-                </div>
-                <div class="map-preview-section">
-                    <canvas id="setup-map-preview" width="200" height="150"></canvas>
-                    <button id="btn-change-map" type="button">🔄 Change Map</button>
-                </div>
-            </div>
-
-            <div class="modal-buttons">
-                <button id="btn-start-game">Start Game</button>
-                <button id="btn-cancel-setup" class="secondary">Cancel</button>
-            </div>
+            </ion-footer>
         </div>
-    </div>
 
-    <!-- Load Game Modal -->
-    <div id="load-modal" class="modal">
-        <div class="modal-content">
-            <h2>Load Game</h2>
-            <div id="games-list">
-                <!-- Games will be inserted here -->
-            </div>
-            <div class="modal-buttons">
-                <button id="btn-cancel-load" class="secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="app">
-        <header>
-            <h1>Slay AI</h1>
-            <div id="controls">
-                <a href="/static/rules.html" target="_blank" class="btn-icon" title="Game Rules">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z"/>
-                    </svg>
-                </a>
-                <button id="btn-theme" title="Toggle theme">
-                    <svg id="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                        <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
-                    </svg>
-                </button>
-                <div class="dropdown">
-                    <button id="btn-new">New ▾</button>
-                    <div class="dropdown-content">
-                        <button id="btn-new-custom">Custom Game...</button>
-                        <button id="btn-quick-ai">Quick AI Battle</button>
-                    </div>
-                </div>
-                <button id="btn-load">Load</button>
-
-                <!-- Unified playback controls: << < [play/turn] > >> -->
-                <div class="playback-controls">
-                    <button id="btn-first" title="First turn" disabled>◀◀</button>
-                    <button id="btn-prev" title="Previous turn" disabled>◀</button>
-                    <button id="btn-play-action" class="play-center" disabled>
-                        <span class="play-icon">▶</span>
-                        <span id="turn-nav">-/-</span>
-                    </button>
-                    <button id="btn-step" title="Next turn" disabled>▶</button>
-                    <button id="btn-last" title="Run to end" disabled>▶▶</button>
-                    <div class="speed-toggle">
-                        <button class="speed-btn" data-speed="fast" title="Rapide">🐇</button>
-                        <button class="speed-btn active" data-speed="normal" title="Normal">🚶</button>
-                        <button class="speed-btn" data-speed="slow" title="Lent">🐢</button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <main>
-            <div id="game-area">
-                <canvas id="board"></canvas>
-                <button id="btn-reroll-map" class="map-overlay-btn">🔄 Change Map</button>
-                <div id="turn-indicator" style="display: none;">
-                    <span class="turn-banner">Your Turn! Click territory to buy, click unit to move</span>
-                </div>
-                <div id="region-panel" style="display: none;">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <aside id="right-panel">
-                <button id="panel-toggle" class="panel-toggle" aria-label="Toggle panel">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                </button>
-
-                <!-- Tabs -->
-                <div class="panel-tabs">
-                    <button class="panel-tab active" data-tab="stats">📊 Stats</button>
-                    <button class="panel-tab" data-tab="log">📜 Log</button>
-                </div>
-
-                <!-- Tab Contents -->
-                <div class="tab-content active" id="tab-stats">
+        <!-- Stats/Log Bottom Sheet Modal -->
+        <ion-modal id="stats-modal" trigger="open-stats-modal" initial-breakpoint="0.4" breakpoints="[0, 0.4, 0.75, 1]" handle-behavior="cycle">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-segment id="panel-tabs" value="stats">
+                        <ion-segment-button value="stats">
+                            <ion-label>Stats</ion-label>
+                        </ion-segment-button>
+                        <ion-segment-button value="log">
+                            <ion-label>Log</ion-label>
+                        </ion-segment-button>
+                    </ion-segment>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+                <!-- Stats Tab -->
+                <div id="tab-stats" class="tab-content active">
                     <div id="stats-graph">
                         <div id="metric-toggle">
-                            <button class="metric-btn active" data-metric="territory">Territory</button>
-                            <button class="metric-btn" data-metric="units">Units</button>
-                            <button class="metric-btn" data-metric="gold">Gold</button>
-                            <label class="trees-toggle" title="Show trees in chart">
-                                <input type="checkbox" id="toggle-trees" checked>
-                                <span>🌲</span>
-                            </label>
+                            <ion-segment id="metric-segment" value="territory">
+                                <ion-segment-button value="territory">
+                                    <ion-label>Territory</ion-label>
+                                </ion-segment-button>
+                                <ion-segment-button value="units">
+                                    <ion-label>Units</ion-label>
+                                </ion-segment-button>
+                                <ion-segment-button value="gold">
+                                    <ion-label>Gold</ion-label>
+                                </ion-segment-button>
+                            </ion-segment>
+                            <ion-checkbox id="toggle-trees" checked class="trees-toggle">Trees</ion-checkbox>
                         </div>
                         <canvas id="stats-chart"></canvas>
                     </div>
                 </div>
-
-                <div class="tab-content" id="tab-log">
+                <!-- Log Tab -->
+                <div id="tab-log" class="tab-content">
                     <div id="log-content">
                         <p class="log-info">Start a new game to begin...</p>
                     </div>
                 </div>
-            </aside>
-        </main>
+            </ion-content>
+        </ion-modal>
 
-        <div id="status-bar">
-            <span id="turn-info">Turn: -</span>
-            <span id="current-player">Current: -</span>
-            <span id="connection-status">Disconnected</span>
-        </div>
+        <!-- Game Setup Modal -->
+        <ion-modal id="setup-modal">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-title>New Game</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button id="btn-cancel-setup">Cancel</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+                <ion-list>
+                    <ion-list-header>
+                        <ion-label>Players</ion-label>
+                    </ion-list-header>
+                    <div id="player-slots">
+                        <ion-item class="player-slot" data-player="0">
+                            <ion-avatar slot="start" style="background: #F0A8A8; width: 24px; height: 24px;"></ion-avatar>
+                            <ion-label>Rose</ion-label>
+                            <ion-select class="player-type" value="human" interface="popover">
+                                <ion-select-option value="human">You</ion-select-option>
+                                <ion-select-option value="classic_ai">Classic AI</ion-select-option>
+                                <ion-select-option value="llm_ai">Claude AI</ion-select-option>
+                            </ion-select>
+                            <ion-select class="ai-difficulty" value="normal" interface="popover">
+                                <ion-select-option value="easy">Easy</ion-select-option>
+                                <ion-select-option value="normal">Normal</ion-select-option>
+                                <ion-select-option value="hard">Hard</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                        <ion-item class="player-slot" data-player="1">
+                            <ion-avatar slot="start" style="background: #A8C8F0; width: 24px; height: 24px;"></ion-avatar>
+                            <ion-label>Sky</ion-label>
+                            <ion-select class="player-type" value="classic_ai" interface="popover">
+                                <ion-select-option value="human">You</ion-select-option>
+                                <ion-select-option value="classic_ai">Classic AI</ion-select-option>
+                                <ion-select-option value="llm_ai">Claude AI</ion-select-option>
+                            </ion-select>
+                            <ion-select class="ai-difficulty" value="normal" interface="popover">
+                                <ion-select-option value="easy">Easy</ion-select-option>
+                                <ion-select-option value="normal">Normal</ion-select-option>
+                                <ion-select-option value="hard">Hard</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                        <ion-item class="player-slot" data-player="2">
+                            <ion-avatar slot="start" style="background: #B8E0B0; width: 24px; height: 24px;"></ion-avatar>
+                            <ion-label>Mint</ion-label>
+                            <ion-select class="player-type" value="classic_ai" interface="popover">
+                                <ion-select-option value="human">You</ion-select-option>
+                                <ion-select-option value="classic_ai">Classic AI</ion-select-option>
+                                <ion-select-option value="llm_ai">Claude AI</ion-select-option>
+                            </ion-select>
+                            <ion-select class="ai-difficulty" value="normal" interface="popover">
+                                <ion-select-option value="easy">Easy</ion-select-option>
+                                <ion-select-option value="normal">Normal</ion-select-option>
+                                <ion-select-option value="hard">Hard</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                        <ion-item class="player-slot" data-player="3">
+                            <ion-avatar slot="start" style="background: #F0E8A8; width: 24px; height: 24px;"></ion-avatar>
+                            <ion-label>Sunny</ion-label>
+                            <ion-select class="player-type" value="classic_ai" interface="popover">
+                                <ion-select-option value="human">You</ion-select-option>
+                                <ion-select-option value="classic_ai">Classic AI</ion-select-option>
+                                <ion-select-option value="llm_ai">Claude AI</ion-select-option>
+                            </ion-select>
+                            <ion-select class="ai-difficulty" value="normal" interface="popover">
+                                <ion-select-option value="easy">Easy</ion-select-option>
+                                <ion-select-option value="normal">Normal</ion-select-option>
+                                <ion-select-option value="hard">Hard</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                    </div>
+                </ion-list>
+                <ion-list>
+                    <ion-list-header>
+                        <ion-label>Map</ion-label>
+                    </ion-list-header>
+                    <ion-item>
+                        <ion-label>Size</ion-label>
+                        <ion-select id="map-size" value="20" interface="popover">
+                            <ion-select-option value="15">Small (15x15)</ion-select-option>
+                            <ion-select-option value="20">Medium (20x20)</ion-select-option>
+                            <ion-select-option value="25">Large (25x25)</ion-select-option>
+                        </ion-select>
+                    </ion-item>
+                    <ion-item>
+                        <ion-label>Seed</ion-label>
+                        <ion-input type="number" id="map-seed" placeholder="Random"></ion-input>
+                    </ion-item>
+                    <ion-item class="map-preview-section">
+                        <canvas id="setup-map-preview" width="200" height="150"></canvas>
+                        <ion-button id="btn-change-map" fill="outline" size="small">Change Map</ion-button>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+            <ion-footer>
+                <ion-toolbar>
+                    <ion-button id="btn-start-game" expand="block" color="success">Start Game</ion-button>
+                </ion-toolbar>
+            </ion-footer>
+        </ion-modal>
+
+        <!-- Load Game Modal -->
+        <ion-modal id="load-modal">
+            <ion-header>
+                <ion-toolbar>
+                    <ion-title>Load Game</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-button id="btn-cancel-load">Cancel</ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+                <ion-list id="games-list">
+                    <!-- Games will be inserted here -->
+                </ion-list>
+            </ion-content>
+        </ion-modal>
+    </ion-app>
+
+    <!-- Status bar (floating) -->
+    <div id="status-bar">
+        <span id="turn-info">Turn: -</span>
+        <span id="current-player">Current: -</span>
+        <span id="connection-status">Disconnected</span>
     </div>
+
+    <!-- FAB for Stats Panel -->
+    <ion-fab vertical="bottom" horizontal="end" slot="fixed" id="stats-fab">
+        <ion-fab-button id="open-stats-modal" size="small">
+            <ion-icon name="stats-chart"></ion-icon>
+        </ion-fab-button>
+    </ion-fab>
 
     <script src="/static/js/board.js"></script>
     <script src="/static/js/websocket.js"></script>

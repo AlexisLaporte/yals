@@ -1,11 +1,15 @@
 /**
- * Main application entry point
+ * Main application entry point - Ionic Integration
  */
 
 // Global reference for UI buttons
 let humanPlayer = null;
 
-(function() {
+(async function() {
+    // Wait for Ionic to be ready
+    await customElements.whenDefined('ion-modal');
+    await customElements.whenDefined('ion-menu');
+
     // Initialize components
     const canvas = document.getElementById('board');
     const board = new HexBoard(canvas);
@@ -25,37 +29,22 @@ let humanPlayer = null;
     let gameRunning = false;
     let gameExists = false;
     let waitingForHuman = null;
-    let humanPlayerId = 0; // Player 0 is human by default
+    let humanPlayerId = 0;
 
     // History navigation state
-    let viewTurn = 0;      // Currently viewed turn
-    let maxTurn = 0;       // Latest turn in game
-    let viewingHistory = false;  // Are we viewing a past turn?
+    let viewTurn = 0;
+    let maxTurn = 0;
+    let viewingHistory = false;
 
     // Track current player for display
     let currentPlayerName = null;
     let currentPlayerId = null;
     let currentGameId = null;
 
-    // Responsive panel management
-    const rightPanel = document.getElementById('right-panel');
-
-    function checkMobileLayout() {
-        const isMobile = window.innerWidth < 768;
-
-        // Auto-collapse panel on mobile at startup or resize to mobile
-        if (isMobile && !rightPanel.classList.contains('collapsed')) {
-            rightPanel.classList.add('collapsed');
-        }
-        // Auto-expand panel on desktop if it was collapsed
-        else if (!isMobile && window.innerWidth >= 1024 && rightPanel.classList.contains('collapsed')) {
-            rightPanel.classList.remove('collapsed');
-        }
-    }
-
-    // Check layout on startup and resize
-    checkMobileLayout();
-    window.addEventListener('resize', checkMobileLayout);
+    // Ionic modal references
+    const setupModal = document.getElementById('setup-modal');
+    const loadModal = document.getElementById('load-modal');
+    const statsModal = document.getElementById('stats-modal');
 
     // URL helpers
     function updateGameUrl(gameId) {
@@ -77,16 +66,19 @@ let humanPlayer = null;
     function updateControls() {
         if (!gameExists) {
             ui.setPlayButtonState('disabled');
+            ui.setTurnInfo(0, '-', null, false);
             ui.setHistoryPosition(0, 0, true, null, null, false);
-            btnRerollMap.classList.remove('visible');
+            if (btnRerollMap) btnRerollMap.classList.remove('visible');
             return;
         }
 
         // Show reroll button only before first turn when not running
-        btnRerollMap.classList.toggle('visible', maxTurn === 0 && !gameRunning);
+        if (btnRerollMap) btnRerollMap.classList.toggle('visible', maxTurn === 0 && !gameRunning);
 
-        // Play button state
-        if (waitingForHuman !== null && !viewingHistory) {
+        const isHumanTurn = waitingForHuman !== null && !viewingHistory;
+
+        // Action button state
+        if (isHumanTurn) {
             ui.setPlayButtonState('end_turn');
         } else if (gameRunning) {
             ui.setPlayButtonState('pause');
@@ -94,7 +86,10 @@ let humanPlayer = null;
             ui.setPlayButtonState('play');
         }
 
-        // History nav with player name and color
+        // Update turn bar info
+        ui.setTurnInfo(viewTurn, currentPlayerName, currentPlayerId, isHumanTurn);
+
+        // History nav
         const isAtEnd = viewTurn >= maxTurn;
         ui.setHistoryPosition(viewTurn, maxTurn, isAtEnd, currentPlayerName, currentPlayerId, true);
     }
@@ -103,7 +98,6 @@ let humanPlayer = null;
     async function goToSnapshot(snapshotId) {
         if (snapshotId < 1 || snapshotId > maxTurn) return;
 
-        // Auto-pause when rewinding while game is running
         if (gameRunning && snapshotId < maxTurn) {
             await pauseGame();
         }
@@ -120,7 +114,6 @@ let humanPlayer = null;
                 board.setState(data.state);
                 ui.updateState(data.state);
 
-                // Extract current player info
                 if (data.state.players && data.state.current_player !== undefined) {
                     currentPlayerId = data.state.current_player;
                     currentPlayerName = data.state.players[currentPlayerId]?.color_name || null;
@@ -138,25 +131,11 @@ let humanPlayer = null;
         }
     }
 
-    // Fetch current max snapshot from server
-    async function fetchMaxSnapshot() {
-        try {
-            const response = await fetch('/api/available-turns');
-            const data = await response.json();
-            if (data.status === 'ok' && data.turns.length > 0) {
-                maxTurn = Math.max(...data.turns);
-            }
-        } catch (e) {
-            console.error('Failed to fetch max snapshot:', e);
-        }
-    }
-
     // Prevent double-clicks
     let executingTurn = false;
 
-    // Execute next turn (when at end of history)
     async function executeNextTurn() {
-        if (executingTurn) return;  // Prevent double-click
+        if (executingTurn) return;
         executingTurn = true;
         ui.setHistoryLoading(true);
 
@@ -175,7 +154,6 @@ let humanPlayer = null;
         }
     }
 
-    // Start auto-play
     async function startGame() {
         try {
             const response = await fetch('/api/start', { method: 'POST' });
@@ -190,7 +168,6 @@ let humanPlayer = null;
         }
     }
 
-    // Pause auto-play
     async function pauseGame() {
         try {
             const response = await fetch('/api/pause', { method: 'POST' });
@@ -214,29 +191,23 @@ let humanPlayer = null;
     });
 
     socket.on('state', (data) => {
-        console.log('State received, waiting_for_human:', data.waiting_for_human, 'max_snapshot:', data.max_snapshot,
-                    'snapshot_player:', data.snapshot_player_id, data.snapshot_player_name);
+        console.log('State received, waiting_for_human:', data.waiting_for_human, 'max_snapshot:', data.max_snapshot);
         gameExists = true;
 
-        // Sync game_running from server
         if (data.game_running !== undefined) {
             gameRunning = data.game_running;
         }
 
-        // Update max snapshot from server if provided
         if (data.max_snapshot !== undefined && data.max_snapshot > 0) {
             maxTurn = data.max_snapshot;
         }
 
-        // If not viewing history, sync viewTurn to max and use snapshot's player info
         if (!viewingHistory) {
             viewTurn = maxTurn;
-            // Use snapshot player info for history nav display (not live player)
             if (data.snapshot_player_id !== undefined) {
                 currentPlayerId = data.snapshot_player_id;
                 currentPlayerName = data.snapshot_player_name || null;
             } else if (data.state?.players && data.state?.current_player !== undefined) {
-                // Fallback to live state if no snapshot info
                 currentPlayerId = data.state.current_player;
                 currentPlayerName = data.state.players[currentPlayerId]?.color_name || null;
             }
@@ -245,7 +216,6 @@ let humanPlayer = null;
         board.setState(data.state);
         ui.updateState(data.state);
 
-        // Incremental graph update (convert player format)
         if (data.state?.turn && data.state?.players) {
             const statsPlayers = data.state.players.map(p => ({
                 id: p.id,
@@ -257,15 +227,13 @@ let humanPlayer = null;
             statsGraph.addTurn(data.state.turn, statsPlayers);
         }
 
-        // Handle human player waiting state
         waitingForHuman = data.waiting_for_human;
         if (waitingForHuman !== null && waitingForHuman !== undefined && !viewingHistory) {
-            console.log('Enabling human player for player', waitingForHuman);
             humanPlayer.enable(waitingForHuman);
-            board.setAffordableCapitals(waitingForHuman);  // Highlight buyable territories
+            board.setAffordableCapitals(waitingForHuman);
         } else {
             humanPlayer.disable();
-            humanPlayer.enableSpectator();  // Allow viewing hex info even when not playing
+            humanPlayer.enableSpectator();
             board.clearAffordableHighlight();
         }
 
@@ -276,11 +244,10 @@ let humanPlayer = null;
         gameExists = true;
         gameRunning = false;
         waitingForHuman = null;
-        viewTurn = 0;  // No snapshot yet - will be created on first turn
+        viewTurn = 0;
         maxTurn = 0;
         viewingHistory = false;
 
-        // Extract current player info from new game state
         if (data.state?.players && data.state?.current_player !== undefined) {
             currentPlayerId = data.state.current_player;
             currentPlayerName = data.state.players[currentPlayerId]?.color_name || null;
@@ -290,11 +257,11 @@ let humanPlayer = null;
         board.clearAffordableHighlight();
         ui.updateState(data.state);
         ui.clearLog();
-        ui.addSystemLog('New game created. Press ▶ to step through or ▶▶ to auto-run.');
+        ui.addSystemLog('New game created. Press Play to step through or fast-forward to auto-run.');
         statsGraph.destroy();
         statsGraph.fetchAndUpdate();
         humanPlayer.disable();
-        humanPlayer.enableSpectator();  // Allow viewing hex info
+        humanPlayer.enableSpectator();
         updateControls();
     });
 
@@ -304,7 +271,6 @@ let humanPlayer = null;
     });
 
     socket.on('territory_deaths', (data) => {
-        // Units that died from being isolated (no capital) at start of turn
         if (data.deaths?.length) {
             const byPlayer = {};
             for (const d of data.deaths) {
@@ -345,7 +311,6 @@ let humanPlayer = null;
 
     socket.on('agent_tool_result', (data) => {
         ui.addLog('tool_result', data.player, data.content);
-        // Highlight affected hexes
         if (data.data) {
             if (data.data.from) {
                 board.highlightHex(data.data.from[0], data.data.from[1], '#ff0');
@@ -378,26 +343,25 @@ let humanPlayer = null;
     });
 
     // Setup modal elements
-    const setupModal = document.getElementById('setup-modal');
     const btnStartGame = document.getElementById('btn-start-game');
     const btnCancelSetup = document.getElementById('btn-cancel-setup');
     const playerSlots = document.querySelectorAll('.player-slot');
 
-    // Show/hide difficulty based on player type
+    // Player type change handler for Ionic selects
     playerSlots.forEach(slot => {
         const typeSelect = slot.querySelector('.player-type');
         const diffSelect = slot.querySelector('.ai-difficulty');
 
-        typeSelect.addEventListener('change', () => {
+        if (typeSelect && diffSelect) {
+            typeSelect.addEventListener('ionChange', (e) => {
+                diffSelect.style.display = e.detail.value === 'human' ? 'none' : 'block';
+            });
+            // Initial state
             diffSelect.style.display = typeSelect.value === 'human' ? 'none' : 'block';
-        });
-
-        // Initial state
-        diffSelect.style.display = typeSelect.value === 'human' ? 'none' : 'block';
+        }
     });
 
     // Load modal elements
-    const loadModal = document.getElementById('load-modal');
     const gamesList = document.getElementById('games-list');
     const btnCancelLoad = document.getElementById('btn-cancel-load');
 
@@ -407,7 +371,6 @@ let humanPlayer = null;
         const ctx = canvas.getContext('2d');
         const hexes = boardData.hexes;
 
-        // Find bounds
         let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
         for (const key in hexes) {
             const [q, r] = key.split(',').map(Number);
@@ -419,7 +382,7 @@ let humanPlayer = null;
         const offsetX = canvas.width / 2 - (maxQ + minQ) / 2 * hexSize * 1.5;
         const offsetY = canvas.height / 2 - (maxR + minR) / 2 * hexSize * 1.7;
 
-        const colors = { 0: '#E08080', 1: '#80A0E0', 2: '#80C080', 3: '#E0E080', 4: '#C080C0', 5: '#E0A060' };
+        const colors = { 0: '#F0A8A8', 1: '#A8C8F0', 2: '#B8E0B0', 3: '#F0E8A8', 4: '#D8B8E8', 5: '#F0C8A8' };
 
         for (const key in hexes) {
             const hex = hexes[key];
@@ -436,7 +399,7 @@ let humanPlayer = null;
                 else ctx.lineTo(hx, hy);
             }
             ctx.closePath();
-            ctx.fillStyle = hex.owner !== null ? colors[hex.owner] : (hex.terrain === 'sea' ? '#6090C0' : '#90B060');
+            ctx.fillStyle = hex.owner !== null ? colors[hex.owner] : (hex.terrain === 'sea' ? '#A8C8E8' : '#B8D4A0');
             ctx.fill();
         }
     }
@@ -453,9 +416,9 @@ let humanPlayer = null;
                 viewTurn = data.turn || 1;
                 maxTurn = data.turn || 1;
                 viewingHistory = false;
-                loadModal.classList.remove('active');
+                await loadModal.dismiss();
                 updateGameUrl(data.game_id || gameId);
-                statsGraph.fetchAndUpdate();  // Load full history
+                statsGraph.fetchAndUpdate();
                 updateControls();
             }
         } catch (e) {
@@ -471,14 +434,14 @@ let humanPlayer = null;
 
             if (data.status === 'ok' && data.games.length > 0) {
                 gamesList.innerHTML = data.games.map(game => `
-                    <div class="game-item" data-id="${game.id}">
-                        <canvas class="game-preview" width="80" height="60" data-board='${JSON.stringify(game.board)}'></canvas>
-                        <div class="game-info">
-                            <div class="turn">Turn ${game.turn}</div>
-                            <div class="date">${new Date(game.updated_at).toLocaleString()}</div>
-                            <div class="players">${game.player_count} players</div>
-                        </div>
-                    </div>
+                    <ion-item button class="game-item" data-id="${game.id}">
+                        <canvas class="game-preview" width="80" height="60" slot="start" data-board='${JSON.stringify(game.board)}'></canvas>
+                        <ion-label class="game-info">
+                            <h2 class="turn">Turn ${game.turn}</h2>
+                            <p class="date">${new Date(game.updated_at).toLocaleString()}</p>
+                            <p class="players">${game.player_count} players</p>
+                        </ion-label>
+                    </ion-item>
                 `).join('');
 
                 // Render previews
@@ -494,10 +457,10 @@ let humanPlayer = null;
                     item.addEventListener('click', () => loadGame(parseInt(item.dataset.id)));
                 });
             } else {
-                gamesList.innerHTML = '<div class="empty">No saved games</div>';
+                gamesList.innerHTML = '<ion-item><ion-label class="ion-text-center">No saved games</ion-label></ion-item>';
             }
 
-            loadModal.classList.add('active');
+            await loadModal.present();
         } catch (e) {
             console.error('Failed to fetch games:', e);
         }
@@ -508,11 +471,12 @@ let humanPlayer = null;
     const setupMapPreview = document.getElementById('setup-map-preview');
     const btnChangeMap = document.getElementById('btn-change-map');
 
-    // Fetch and render map preview
     async function updateMapPreview() {
-        const size = parseInt(document.getElementById('map-size').value);
-        const seedInput = document.getElementById('map-seed').value;
-        const seed = seedInput ? parseInt(seedInput) : null;
+        const sizeSelect = document.getElementById('map-size');
+        const seedInput = document.getElementById('map-seed');
+        const size = parseInt(sizeSelect?.value || '20');
+        const seedValue = seedInput?.value || '';
+        const seed = seedValue ? parseInt(seedValue) : null;
         const numPlayers = document.querySelectorAll('.player-slot').length;
 
         try {
@@ -520,7 +484,7 @@ let humanPlayer = null;
                         (seed !== null ? `&seed=${seed}` : '');
             const response = await fetch(url);
             const data = await response.json();
-            if (data.status === 'ok') {
+            if (data.status === 'ok' && setupMapPreview) {
                 currentPreviewSeed = data.seed;
                 renderMiniBoard(setupMapPreview, data.board);
             }
@@ -530,16 +494,20 @@ let humanPlayer = null;
     }
 
     // Change Map button
-    btnChangeMap.addEventListener('click', () => {
-        document.getElementById('map-seed').value = '';  // Clear seed to get new random
+    btnChangeMap?.addEventListener('click', () => {
+        const seedInput = document.getElementById('map-seed');
+        if (seedInput) seedInput.value = '';
         updateMapPreview();
     });
 
     // Update preview when size changes
-    document.getElementById('map-size').addEventListener('change', updateMapPreview);
+    document.getElementById('map-size')?.addEventListener('ionChange', updateMapPreview);
 
-    // Quick AI Battle
-    document.getElementById('btn-quick-ai').addEventListener('click', async () => {
+    // Quick AI Battle (from menu)
+    document.getElementById('menu-quick-ai')?.addEventListener('click', async () => {
+        const menu = document.querySelector('ion-menu');
+        await menu?.close();
+
         const config = {
             players: [
                 { controller_type: 'classic_ai', ai_difficulty: 'normal' },
@@ -565,7 +533,7 @@ let humanPlayer = null;
                 maxTurn = 0;
                 viewingHistory = false;
                 updateGameUrl(data.game_id);
-                ui.addSystemLog('Quick AI Battle started! Press ▶ to step or ▶▶ to auto-run.');
+                ui.addSystemLog('Quick AI Battle started! Press Play to auto-run.');
                 updateControls();
             }
         } catch (e) {
@@ -573,16 +541,23 @@ let humanPlayer = null;
         }
     });
 
-    // Custom Game button (opens modal)
-    document.getElementById('btn-new-custom').addEventListener('click', () => {
-        setupModal.classList.add('active');
-        updateMapPreview();  // Generate preview when modal opens
+    // Custom Game button (opens modal) - from menu
+    document.getElementById('menu-new-custom')?.addEventListener('click', async () => {
+        const menu = document.querySelector('ion-menu');
+        await menu?.close();
+        await setupModal.present();
+        updateMapPreview();
     });
 
-    document.getElementById('btn-load').addEventListener('click', showLoadModal);
+    // Load button - from menu
+    document.getElementById('menu-load')?.addEventListener('click', async () => {
+        const menu = document.querySelector('ion-menu');
+        await menu?.close();
+        await showLoadModal();
+    });
 
-    // Reroll map button (regenerate map at turn 1)
-    btnRerollMap.addEventListener('click', async () => {
+    // Reroll map button
+    btnRerollMap?.addEventListener('click', async () => {
         btnRerollMap.disabled = true;
         try {
             const response = await fetch('/api/reroll-map', { method: 'POST' });
@@ -598,38 +573,33 @@ let humanPlayer = null;
         btnRerollMap.disabled = false;
     });
 
-    btnCancelLoad.addEventListener('click', () => {
-        loadModal.classList.remove('active');
+    btnCancelLoad?.addEventListener('click', async () => {
+        await loadModal.dismiss();
     });
 
-    // Close load modal on background click
-    loadModal.addEventListener('click', (e) => {
-        if (e.target === loadModal) {
-            loadModal.classList.remove('active');
-        }
-    });
-
-    btnCancelSetup.addEventListener('click', () => {
-        setupModal.classList.remove('active');
+    btnCancelSetup?.addEventListener('click', async () => {
+        await setupModal.dismiss();
         currentPreviewSeed = null;
     });
 
-    btnStartGame.addEventListener('click', async () => {
-        // Build config from form
+    btnStartGame?.addEventListener('click', async () => {
         const players = [];
         playerSlots.forEach(slot => {
-            const type = slot.querySelector('.player-type').value;
-            const difficulty = slot.querySelector('.ai-difficulty').value;
+            const typeSelect = slot.querySelector('.player-type');
+            const diffSelect = slot.querySelector('.ai-difficulty');
+            const type = typeSelect?.value || 'classic_ai';
+            const difficulty = diffSelect?.value || 'normal';
             players.push({
                 controller_type: type,
                 ai_difficulty: difficulty
             });
         });
 
-        const size = parseInt(document.getElementById('map-size').value);
-        const seedInput = document.getElementById('map-seed').value;
-        // Use preview seed if available, otherwise use input or null
-        const seed = seedInput ? parseInt(seedInput) : currentPreviewSeed;
+        const sizeSelect = document.getElementById('map-size');
+        const seedInput = document.getElementById('map-seed');
+        const size = parseInt(sizeSelect?.value || '20');
+        const seedValue = seedInput?.value || '';
+        const seed = seedValue ? parseInt(seedValue) : currentPreviewSeed;
 
         const config = {
             players,
@@ -650,19 +620,18 @@ let humanPlayer = null;
                 viewTurn = 0;
                 maxTurn = 0;
                 viewingHistory = false;
-                setupModal.classList.remove('active');
+                await setupModal.dismiss();
                 currentPreviewSeed = null;
                 updateGameUrl(data.game_id);
 
-                // Find human players
                 const humanPlayers = players
                     .map((p, i) => p.controller_type === 'human' ? i : -1)
                     .filter(i => i >= 0);
 
                 if (humanPlayers.length > 0) {
-                    ui.addSystemLog(`Game created! You control: ${humanPlayers.map(i => ui.colorNames[i]).join(', ')}. Press ▶ to start.`);
+                    ui.addSystemLog(`Game created! You control: ${humanPlayers.map(i => ui.colorNames[i]).join(', ')}. Press Play to start.`);
                 } else {
-                    ui.addSystemLog('AI vs AI game. Press ▶ to step or ▶▶ to auto-run.');
+                    ui.addSystemLog('AI vs AI game. Press Play to step or fast-forward to auto-run.');
                 }
                 updateControls();
             }
@@ -672,26 +641,21 @@ let humanPlayer = null;
         }
     });
 
-    // Close modal on background click
-    setupModal.addEventListener('click', (e) => {
-        if (e.target === setupModal) {
-            setupModal.classList.remove('active');
-            currentPreviewSeed = null;
+    // End Turn button (human player)
+    ui.btnEndTurn?.addEventListener('click', () => {
+        if (waitingForHuman !== null && !viewingHistory) {
+            humanPlayer.endTurn();
         }
     });
 
-    // Play/Pause/End Turn contextual button
-    ui.btnPlayAction.addEventListener('click', async () => {
-        if (waitingForHuman !== null && !viewingHistory) {
-            // End human turn
-            humanPlayer.endTurn();
-        } else if (gameRunning) {
-            // Pause
-            await pauseGame();
-        } else {
-            // Start auto-play
-            await startGame();
-        }
+    // Run Game button
+    ui.btnRunGame?.addEventListener('click', async () => {
+        await startGame();
+    });
+
+    // Pause button
+    ui.btnPauseGame?.addEventListener('click', async () => {
+        await pauseGame();
     });
 
     // Double-click confirmation state
@@ -702,27 +666,27 @@ let humanPlayer = null;
     function resetConfirm() {
         stepConfirmPending = false;
         lastConfirmPending = false;
-        ui.btnStep.classList.remove('confirm-pending');
-        ui.btnLast.classList.remove('confirm-pending');
+        ui.btnStep?.classList.remove('confirm-pending');
+        ui.btnLast?.classList.remove('confirm-pending');
         if (confirmTimeout) clearTimeout(confirmTimeout);
     }
 
     // Playback navigation buttons
-    ui.btnFirst.addEventListener('click', () => {
+    ui.btnFirst?.addEventListener('click', () => {
         resetConfirm();
         goToSnapshot(1);
     });
-    ui.btnPrev.addEventListener('click', () => {
+
+    ui.btnPrev?.addEventListener('click', () => {
         resetConfirm();
         goToSnapshot(viewTurn - 1);
     });
-    ui.btnStep.addEventListener('click', async () => {
+
+    ui.btnStep?.addEventListener('click', async () => {
         if (viewTurn < maxTurn) {
-            // Navigate forward in history
             resetConfirm();
             await goToSnapshot(viewTurn + 1);
         } else {
-            // At end - double-click required to execute
             if (stepConfirmPending) {
                 resetConfirm();
                 await executeNextTurn();
@@ -735,15 +699,12 @@ let humanPlayer = null;
         }
     });
 
-    // Fast forward: run game to completion
-    ui.btnLast.addEventListener('click', async () => {
+    ui.btnLast?.addEventListener('click', async () => {
         if (viewTurn < maxTurn) {
-            // First go to current end (no confirmation needed)
             resetConfirm();
             viewingHistory = false;
             await goToSnapshot(maxTurn);
         } else {
-            // At end - double-click required to start auto-play
             if (lastConfirmPending) {
                 resetConfirm();
                 await startGame();
@@ -756,62 +717,52 @@ let humanPlayer = null;
         }
     });
 
-    // Metric toggle buttons
-    document.querySelectorAll('.metric-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            statsGraph.setMetric(btn.dataset.metric);
-        });
+    // Metric toggle - listen for custom events from Ionic segment
+    document.addEventListener('metricChange', (e) => {
+        statsGraph.setMetric(e.detail.metric);
     });
 
-    // Trees toggle
-    const treesToggle = document.getElementById('toggle-trees');
-    if (treesToggle) {
-        treesToggle.addEventListener('change', () => {
-            statsGraph.setShowTrees(treesToggle.checked);
-        });
-    }
+    // Trees toggle - listen for custom events
+    document.addEventListener('treesToggle', (e) => {
+        statsGraph.setShowTrees(e.detail.showTrees);
+    });
 
-    // Speed toggle buttons
-    document.querySelectorAll('.speed-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const speed = btn.dataset.speed;
-            try {
-                const response = await fetch('/api/speed', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preset: speed })
-                });
-                if (response.ok) {
-                    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                }
-            } catch (e) {
-                console.error('Failed to set speed:', e);
-            }
-        });
+    // Speed segment from menu
+    document.getElementById('menu-speed')?.addEventListener('ionChange', async (e) => {
+        const speed = e.detail.value;
+        try {
+            await fetch('/api/speed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ preset: speed })
+            });
+        } catch (e) {
+            console.error('Failed to set speed:', e);
+        }
+    });
+
+    // Stats FAB opens modal
+    document.getElementById('open-stats-modal')?.addEventListener('click', async () => {
+        await statsModal.present();
     });
 
     // Connect WebSocket
     socket.connect();
 
-    // Auto-load game on startup (from URL or latest)
+    // Auto-load game on startup
     setTimeout(async () => {
         if (!gameExists) {
             const urlGameId = getGameIdFromUrl();
             try {
                 if (urlGameId) {
-                    // Load specific game from URL
                     await loadGame(urlGameId);
                     console.log('Loaded game from URL:', urlGameId);
                 } else {
-                    // Load latest game
                     const response = await fetch('/api/game/latest');
                     const data = await response.json();
                     if (data.status === 'ok') {
                         updateGameUrl(data.game_id);
-                        statsGraph.fetchAndUpdate();  // Load full history
+                        statsGraph.fetchAndUpdate();
                         console.log('Auto-loaded last game at turn', data.turn);
                     }
                 }

@@ -1,125 +1,192 @@
 /**
- * UI management for Slay game
+ * UI management for Slay game - Ionic Integration
  */
 
 class GameUI {
     constructor() {
-        // Player colors - Slay pastel palette (matching board.js)
+        // Player colors - Modern pastel palette (matching CSS variables)
         this.colors = {
-            0: '#E08080',
-            1: '#80A0E0',
-            2: '#80C080',
-            3: '#E0E080',
-            4: '#C080C0',
-            5: '#E0A060'
+            0: '#F0A8A8',  // Soft rose
+            1: '#A8C8F0',  // Sky blue
+            2: '#B8E0B0',  // Mint green
+            3: '#F0E8A8',  // Pale yellow
+            4: '#D8B8E8',  // Lavender
+            5: '#F0C8A8'   // Peach
         };
 
-        this.colorNames = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange'];
+        this.colorNames = ['Rose', 'Sky', 'Mint', 'Sunny', 'Lavender', 'Peach'];
 
         // Elements
         this.logContent = document.getElementById('log-content');
         this.turnInfo = document.getElementById('turn-info');
         this.currentPlayer = document.getElementById('current-player');
         this.connectionStatus = document.getElementById('connection-status');
-        this.rightPanel = document.getElementById('right-panel');
-        this.panelToggle = document.getElementById('panel-toggle');
 
-        // Buttons
-        this.btnNew = document.getElementById('btn-new');
-        this.btnPlayAction = document.getElementById('btn-play-action');
-        this.playIcon = this.btnPlayAction?.querySelector('.play-icon');
+        // New game controls
+        this.gameControls = document.getElementById('game-controls');
+        this.turnNumber = document.getElementById('turn-number');
+        this.playerIndicator = document.getElementById('player-indicator');
+        this.playerName = document.getElementById('player-name');
+        this.playerDot = this.playerIndicator?.querySelector('.player-dot');
 
-        // Playback navigation
+        // Action buttons
+        this.btnEndTurn = document.getElementById('btn-end-turn');
+        this.aiPlaying = document.getElementById('ai-playing');
+        this.btnRunGame = document.getElementById('btn-run-game');
+        this.btnPauseGame = document.getElementById('btn-pause-game');
+
+        // History navigation
         this.btnFirst = document.getElementById('btn-first');
         this.btnPrev = document.getElementById('btn-prev');
         this.btnStep = document.getElementById('btn-step');
         this.btnLast = document.getElementById('btn-last');
-        this.turnNav = document.getElementById('turn-nav');
+        this.historyPosition = document.getElementById('history-position');
 
         // Human player controls
         this.turnIndicator = document.getElementById('turn-indicator');
+
+        // Ionic modals
+        this.setupModal = document.getElementById('setup-modal');
+        this.loadModal = document.getElementById('load-modal');
+        this.statsModal = document.getElementById('stats-modal');
 
         this.state = null;
         this.currentPlayerId = null;
         this.humanPlayer = null;
 
-        // Mobile elements
-        this.mobileMenu = document.getElementById('mobile-menu');
-        this.btnMenuToggle = document.getElementById('btn-menu-toggle');
-        this.btnPlayMobile = document.getElementById('btn-play-mobile');
-        this.btnPanelToggleMobile = document.getElementById('btn-panel-toggle-mobile');
-        this.turnNavMobile = document.querySelector('.turn-nav-mobile');
+        // Initialize after Ionic is ready
+        this.initWhenReady();
+    }
 
-        // Initialize toggles
-        this.initPanelToggle();
+    async initWhenReady() {
+        // Wait for Ionic components to be defined
+        await customElements.whenDefined('ion-modal');
+        await customElements.whenDefined('ion-menu');
+
+        this.initMenuActions();
         this.initTabSwitching();
         this.initThemeToggle();
         this.initRegionPanelDrag();
-        this.initMobileMenu();
-        this.initBottomSheetDrag();
+        this.initStatsModalTabs();
     }
 
-    initPanelToggle() {
-        if (!this.panelToggle || !this.rightPanel) return;
+    initMenuActions() {
+        const menu = document.querySelector('ion-menu');
+        if (!menu) return;
 
-        const isMobile = () => window.innerWidth < 768;
+        // Close menu helper
+        const closeMenu = async () => {
+            await menu.close();
+        };
 
-        // Restore state from localStorage (desktop uses collapsed, mobile uses expanded)
-        const savedCollapsed = localStorage.getItem('rightPanelCollapsed') === 'true';
-        if (!isMobile() && savedCollapsed) {
-            this.rightPanel.classList.add('collapsed');
-        }
-
-        // Desktop toggle handler
-        this.panelToggle.addEventListener('click', () => {
-            if (!isMobile()) {
-                this.rightPanel.classList.toggle('collapsed');
-                localStorage.setItem('rightPanelCollapsed', this.rightPanel.classList.contains('collapsed'));
-            }
+        // Game actions
+        document.getElementById('menu-new-custom')?.addEventListener('click', async () => {
+            await closeMenu();
+            document.getElementById('btn-new-custom')?.click();
         });
 
-        // Handle window resize - switch between mobile and desktop modes
-        let lastMobileState = isMobile();
-        window.addEventListener('resize', () => {
-            const nowMobile = isMobile();
-            if (nowMobile !== lastMobileState) {
-                // Reset panel state when switching modes
-                this.rightPanel.classList.remove('collapsed', 'expanded');
-                this.rightPanel.style.transform = '';
-                lastMobileState = nowMobile;
-            }
+        document.getElementById('menu-quick-ai')?.addEventListener('click', async () => {
+            await closeMenu();
+            document.getElementById('btn-quick-ai')?.click();
+        });
+
+        document.getElementById('menu-load')?.addEventListener('click', async () => {
+            await closeMenu();
+            document.getElementById('btn-load')?.click();
+        });
+
+        // Navigation actions - sync with footer buttons
+        document.getElementById('menu-first')?.addEventListener('click', async () => {
+            await closeMenu();
+            this.btnFirst?.click();
+        });
+
+        document.getElementById('menu-prev')?.addEventListener('click', async () => {
+            await closeMenu();
+            this.btnPrev?.click();
+        });
+
+        document.getElementById('menu-step')?.addEventListener('click', async () => {
+            await closeMenu();
+            this.btnStep?.click();
+        });
+
+        document.getElementById('menu-last')?.addEventListener('click', async () => {
+            await closeMenu();
+            this.btnLast?.click();
+        });
+
+        // Speed control
+        const menuSpeed = document.getElementById('menu-speed');
+        if (menuSpeed) {
+            menuSpeed.addEventListener('ionChange', (e) => {
+                const speed = e.detail.value;
+                // Sync with desktop speed buttons if they exist
+                const desktopSpeedBtns = document.querySelectorAll('.speed-btn');
+                desktopSpeedBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.speed === speed);
+                    if (btn.dataset.speed === speed) {
+                        btn.click();
+                    }
+                });
+            });
+        }
+
+        // Theme toggle in menu
+        document.getElementById('menu-theme')?.addEventListener('click', async () => {
+            await closeMenu();
+            document.getElementById('btn-theme')?.click();
         });
     }
 
     initTabSwitching() {
-        const tabs = document.querySelectorAll('.panel-tab');
-        const contents = document.querySelectorAll('.tab-content');
+        const panelTabs = document.getElementById('panel-tabs');
+        if (!panelTabs) return;
 
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.dataset.tab;
-
-                // Update tab buttons
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                // Update content
-                contents.forEach(c => c.classList.remove('active'));
-                const targetContent = document.getElementById(`tab-${tabId}`);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
-
-                // Save active tab
-                localStorage.setItem('activeTab', tabId);
-            });
+        panelTabs.addEventListener('ionChange', (e) => {
+            const tabId = e.detail.value;
+            this.switchTab(tabId);
+            localStorage.setItem('activeTab', tabId);
         });
 
         // Restore active tab
         const savedTab = localStorage.getItem('activeTab');
         if (savedTab) {
-            const tab = document.querySelector(`.panel-tab[data-tab="${savedTab}"]`);
-            if (tab) tab.click();
+            panelTabs.value = savedTab;
+            this.switchTab(savedTab);
+        }
+    }
+
+    switchTab(tabId) {
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(c => c.classList.remove('active'));
+
+        const targetContent = document.getElementById(`tab-${tabId}`);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+    }
+
+    initStatsModalTabs() {
+        // Metric toggle in stats tab
+        const metricSegment = document.getElementById('metric-segment');
+        if (metricSegment) {
+            metricSegment.addEventListener('ionChange', (e) => {
+                const metric = e.detail.value;
+                // Trigger the graph update - this will be handled by graph.js
+                const event = new CustomEvent('metricChange', { detail: { metric } });
+                document.dispatchEvent(event);
+            });
+        }
+
+        // Trees toggle
+        const treesToggle = document.getElementById('toggle-trees');
+        if (treesToggle) {
+            treesToggle.addEventListener('ionChange', (e) => {
+                const showTrees = e.detail.checked;
+                const event = new CustomEvent('treesToggle', { detail: { showTrees } });
+                document.dispatchEvent(event);
+            });
         }
     }
 
@@ -131,7 +198,9 @@ class GameUI {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
             document.documentElement.setAttribute('data-theme', savedTheme);
-            // Notify board after a tick (to let CSS apply)
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+            }
             setTimeout(() => {
                 if (this.onThemeChange) this.onThemeChange();
             }, 0);
@@ -144,17 +213,31 @@ class GameUI {
 
             if (newTheme === 'light') {
                 document.documentElement.removeAttribute('data-theme');
+                document.body.classList.remove('dark');
             } else {
                 document.documentElement.setAttribute('data-theme', 'dark');
+                document.body.classList.add('dark');
             }
 
             localStorage.setItem('theme', newTheme);
+
+            // Update icon
+            const icon = btnTheme.querySelector('ion-icon');
+            if (icon) {
+                icon.name = newTheme === 'dark' ? 'moon-outline' : 'sunny-outline';
+            }
 
             // Notify board to reload colors
             if (this.onThemeChange) {
                 this.onThemeChange();
             }
         });
+
+        // Set initial icon
+        const icon = btnTheme.querySelector('ion-icon');
+        if (icon && savedTheme === 'dark') {
+            icon.name = 'moon-outline';
+        }
     }
 
     initRegionPanelDrag() {
@@ -164,7 +247,6 @@ class GameUI {
         let isDragging = false;
         let startX, startY, startLeft, startTop;
 
-        // Get position from event (mouse or touch)
         const getEventPosition = (e) => {
             if (e.touches && e.touches.length > 0) {
                 return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -192,7 +274,6 @@ class GameUI {
             const dx = pos.x - startX;
             const dy = pos.y - startY;
 
-            // Keep panel within viewport bounds
             const maxLeft = window.innerWidth - panel.offsetWidth - 8;
             const maxTop = window.innerHeight - panel.offsetHeight - 8;
             const newLeft = Math.max(8, Math.min(maxLeft, startLeft + dx));
@@ -206,208 +287,14 @@ class GameUI {
             isDragging = false;
         };
 
-        // Mouse events
         panel.addEventListener('mousedown', onDragStart);
         document.addEventListener('mousemove', onDragMove);
         document.addEventListener('mouseup', onDragEnd);
 
-        // Touch events
         panel.addEventListener('touchstart', onDragStart, { passive: false });
         document.addEventListener('touchmove', onDragMove, { passive: false });
         document.addEventListener('touchend', onDragEnd);
         document.addEventListener('touchcancel', onDragEnd);
-    }
-
-    initBottomSheetDrag() {
-        if (!this.rightPanel) return;
-
-        const handle = this.rightPanel.querySelector('.bottom-sheet-handle');
-        if (!handle) return;
-
-        let isDragging = false;
-        let startY = 0;
-        let startTransform = 0;
-        let currentY = 0;
-
-        const isMobile = () => window.innerWidth < 768;
-
-        // Get the current translateY value
-        const getCurrentTranslateY = () => {
-            const style = window.getComputedStyle(this.rightPanel);
-            const matrix = new DOMMatrixReadOnly(style.transform);
-            return matrix.m42; // This is the translateY value
-        };
-
-        // Calculate the collapsed and expanded positions
-        const getPositions = () => {
-            const panelHeight = this.rightPanel.offsetHeight;
-            const peekHeight = 60; // How much shows when collapsed
-            return {
-                collapsed: panelHeight - peekHeight,
-                expanded: 0
-            };
-        };
-
-        const onDragStart = (e) => {
-            if (!isMobile()) return;
-
-            isDragging = true;
-            startY = e.touches ? e.touches[0].clientY : e.clientY;
-            startTransform = getCurrentTranslateY();
-
-            this.rightPanel.style.transition = 'none';
-            handle.style.cursor = 'grabbing';
-        };
-
-        const onDragMove = (e) => {
-            if (!isDragging || !isMobile()) return;
-
-            currentY = e.touches ? e.touches[0].clientY : e.clientY;
-            const deltaY = currentY - startY;
-            const positions = getPositions();
-
-            // Clamp the new position
-            let newTransform = startTransform + deltaY;
-            newTransform = Math.max(positions.expanded, Math.min(positions.collapsed, newTransform));
-
-            this.rightPanel.style.transform = `translateY(${newTransform}px)`;
-        };
-
-        const onDragEnd = () => {
-            if (!isDragging || !isMobile()) return;
-
-            isDragging = false;
-            handle.style.cursor = 'grab';
-
-            // Restore transition
-            this.rightPanel.style.transition = '';
-
-            const positions = getPositions();
-            const currentTranslate = getCurrentTranslateY();
-            const threshold = (positions.collapsed - positions.expanded) / 2;
-
-            // Snap to expanded or collapsed based on position
-            if (currentTranslate < threshold) {
-                this.rightPanel.classList.add('expanded');
-            } else {
-                this.rightPanel.classList.remove('expanded');
-            }
-
-            // Remove inline transform to let CSS take over
-            this.rightPanel.style.transform = '';
-        };
-
-        // Touch events on handle
-        handle.addEventListener('touchstart', onDragStart, { passive: true });
-        document.addEventListener('touchmove', onDragMove, { passive: true });
-        document.addEventListener('touchend', onDragEnd);
-        document.addEventListener('touchcancel', onDragEnd);
-
-        // Mouse events for testing
-        handle.addEventListener('mousedown', onDragStart);
-        document.addEventListener('mousemove', onDragMove);
-        document.addEventListener('mouseup', onDragEnd);
-
-        // Click on handle toggles expanded state
-        handle.addEventListener('click', (e) => {
-            if (!isMobile()) return;
-            // Only toggle if it wasn't a drag
-            if (Math.abs(currentY - startY) < 10 || currentY === 0) {
-                this.rightPanel.classList.toggle('expanded');
-            }
-            currentY = 0;
-        });
-
-        // Also allow the panel tabs to expand on tap
-        const panelTabs = this.rightPanel.querySelector('.panel-tabs');
-        if (panelTabs) {
-            panelTabs.addEventListener('click', () => {
-                if (isMobile() && !this.rightPanel.classList.contains('expanded')) {
-                    this.rightPanel.classList.add('expanded');
-                }
-            });
-        }
-    }
-
-    initMobileMenu() {
-        if (!this.mobileMenu || !this.btnMenuToggle) return;
-
-        // Toggle menu
-        this.btnMenuToggle.addEventListener('click', () => {
-            this.mobileMenu.classList.toggle('active');
-        });
-
-        // Close menu on overlay click
-        this.mobileMenu.addEventListener('click', (e) => {
-            if (e.target === this.mobileMenu) {
-                this.mobileMenu.classList.remove('active');
-            }
-        });
-
-        // Mobile panel toggle (bottom sheet)
-        if (this.btnPanelToggleMobile && this.rightPanel) {
-            this.btnPanelToggleMobile.addEventListener('click', () => {
-                this.rightPanel.classList.toggle('expanded');
-            });
-        }
-
-        // Sync mobile buttons with desktop buttons
-        const syncButton = (mobileId, desktopId) => {
-            const mobileBtn = document.getElementById(mobileId);
-            const desktopBtn = document.getElementById(desktopId);
-            if (mobileBtn && desktopBtn) {
-                mobileBtn.addEventListener('click', () => {
-                    desktopBtn.click();
-                    this.mobileMenu.classList.remove('active');
-                });
-            }
-        };
-
-        // Game controls
-        syncButton('btn-new-mobile', 'btn-new-custom');
-        syncButton('btn-quick-ai-mobile', 'btn-quick-ai');
-        syncButton('btn-load-mobile', 'btn-load');
-
-        // Playback controls
-        syncButton('btn-first-mobile', 'btn-first');
-        syncButton('btn-prev-mobile', 'btn-prev');
-        syncButton('btn-step-mobile', 'btn-step');
-        syncButton('btn-last-mobile', 'btn-last');
-
-        // Theme toggle
-        const btnThemeMobile = document.getElementById('btn-theme-mobile');
-        const btnTheme = document.getElementById('btn-theme');
-        if (btnThemeMobile && btnTheme) {
-            btnThemeMobile.addEventListener('click', () => {
-                btnTheme.click();
-                this.mobileMenu.classList.remove('active');
-            });
-        }
-
-        // Mobile play button syncs with desktop
-        if (this.btnPlayMobile && this.btnPlayAction) {
-            this.btnPlayMobile.addEventListener('click', () => {
-                this.btnPlayAction.click();
-            });
-        }
-
-        // Sync speed buttons in mobile menu
-        const mobileSpeedBtns = this.mobileMenu.querySelectorAll('.speed-btn');
-        const desktopSpeedBtns = document.querySelectorAll('#controls .speed-btn');
-        mobileSpeedBtns.forEach(mobileBtn => {
-            mobileBtn.addEventListener('click', () => {
-                const speed = mobileBtn.dataset.speed;
-                // Find and click matching desktop button
-                desktopSpeedBtns.forEach(desktopBtn => {
-                    if (desktopBtn.dataset.speed === speed) {
-                        desktopBtn.click();
-                    }
-                });
-                // Update mobile active state
-                mobileSpeedBtns.forEach(b => b.classList.remove('active'));
-                mobileBtn.classList.add('active');
-            });
-        });
     }
 
     setHumanPlayer(humanPlayer) {
@@ -415,67 +302,78 @@ class GameUI {
     }
 
     showHumanControls(show, humanPlayer) {
-        // Show/hide turn indicator
         if (this.turnIndicator) {
             this.turnIndicator.style.display = show ? 'block' : 'none';
         }
-        // Hide region panel when disabling
         if (!show) {
             this.hideRegionPanel();
         }
     }
 
-    // Set Play button state: 'play', 'pause', or 'end_turn'
-    setPlayButtonState(state) {
-        const buttons = [this.btnPlayAction, this.btnPlayMobile].filter(Boolean);
+    // Set action area state: shows the appropriate button based on game state
+    setPlayButtonState(state, isHumanTurn = false) {
+        // Hide all action buttons first
+        if (this.btnEndTurn) this.btnEndTurn.style.display = 'none';
+        if (this.aiPlaying) this.aiPlaying.style.display = 'none';
+        if (this.btnRunGame) this.btnRunGame.style.display = 'none';
+        if (this.btnPauseGame) this.btnPauseGame.style.display = 'none';
 
-        buttons.forEach(btn => {
-            btn.classList.remove('end-turn', 'paused');
-            btn.disabled = false;
-            const icon = btn.querySelector('.play-icon');
-
-            switch (state) {
-                case 'play':
-                    if (icon) icon.textContent = '▶';
-                    break;
-                case 'pause':
-                    if (icon) icon.textContent = '⏸';
-                    btn.classList.add('paused');
-                    break;
-                case 'end_turn':
-                    if (icon) icon.textContent = '✓';
-                    btn.classList.add('end-turn');
-                    break;
-                case 'disabled':
-                    if (icon) icon.textContent = '▶';
-                    btn.disabled = true;
-                    break;
-            }
-        });
+        switch (state) {
+            case 'end_turn':
+                // Human player's turn - show "End Turn" button
+                if (this.btnEndTurn) this.btnEndTurn.style.display = 'flex';
+                break;
+            case 'ai_playing':
+                // AI is currently playing - show indicator
+                if (this.aiPlaying) this.aiPlaying.style.display = 'flex';
+                break;
+            case 'pause':
+                // Game is running (auto-play) - show pause button
+                if (this.btnPauseGame) this.btnPauseGame.style.display = 'flex';
+                break;
+            case 'play':
+            case 'disabled':
+            default:
+                // Game paused or no game - show run button
+                if (this.btnRunGame) {
+                    this.btnRunGame.style.display = 'flex';
+                    this.btnRunGame.disabled = (state === 'disabled');
+                }
+                break;
+        }
     }
 
-    // Update playback controls display
-    setHistoryPosition(current, max, isAtEnd, playerName = null, playerId = null, gameExists = true) {
-        // Update turn nav text (desktop and mobile)
-        let text = max > 0 ? `${current}/${max}` : '-/-';
-        if (playerName && max > 0) {
-            text = `${playerName} ${current}/${max}`;
-        } else if (playerName) {
-            text = playerName;
+    // Update turn bar display
+    setTurnInfo(turn, playerName, playerId, isHumanTurn = false) {
+        // Update turn number
+        if (this.turnNumber) {
+            this.turnNumber.textContent = turn > 0 ? turn : '-';
         }
 
-        if (this.turnNav) this.turnNav.textContent = text;
-        if (this.turnNavMobile) this.turnNavMobile.textContent = text;
+        // Update player indicator
+        if (this.playerName) {
+            this.playerName.textContent = playerName || '-';
+        }
 
-        // Color the center buttons based on current player
-        const buttons = [this.btnPlayAction, this.btnPlayMobile].filter(Boolean);
-        buttons.forEach(btn => {
-            if (playerId !== null && this.colors[playerId]) {
-                btn.style.setProperty('--player-bg', this.colors[playerId]);
-            }
-        });
+        // Update player dot color
+        if (this.playerDot && playerId !== null && this.colors[playerId]) {
+            this.playerDot.style.background = this.colors[playerId];
+        }
 
-        // Enable/disable nav buttons (desktop)
+        // Mark if it's human's turn
+        if (this.playerIndicator) {
+            this.playerIndicator.classList.toggle('is-human', isHumanTurn);
+        }
+    }
+
+    // Update history controls display
+    setHistoryPosition(current, max, isAtEnd, playerName = null, playerId = null, gameExists = true) {
+        // Update history position text
+        if (this.historyPosition) {
+            this.historyPosition.textContent = max > 0 ? `${current}/${max}` : '-/-';
+        }
+
+        // Enable/disable nav buttons
         const hasHistory = max > 0;
         const canGoBack = current > 1;
 
@@ -483,35 +381,27 @@ class GameUI {
         if (this.btnPrev) this.btnPrev.disabled = !gameExists || !hasHistory || !canGoBack;
         if (this.btnStep) {
             this.btnStep.disabled = !gameExists;
-            this.btnStep.textContent = '▶';
-            this.btnStep.title = isAtEnd ? 'Execute next turn' : 'Next turn in history';
         }
         if (this.btnLast) {
             this.btnLast.disabled = !gameExists;
-            this.btnLast.title = 'Run to end of game';
         }
 
-        // Sync mobile nav buttons
-        const btnFirstMobile = document.getElementById('btn-first-mobile');
-        const btnPrevMobile = document.getElementById('btn-prev-mobile');
-        const btnStepMobile = document.getElementById('btn-step-mobile');
-        const btnLastMobile = document.getElementById('btn-last-mobile');
+        // Toggle viewing-history class on game controls
+        if (this.gameControls) {
+            this.gameControls.classList.toggle('viewing-history', !isAtEnd && hasHistory);
+        }
 
-        if (btnFirstMobile) btnFirstMobile.disabled = !gameExists || !hasHistory || !canGoBack;
-        if (btnPrevMobile) btnPrevMobile.disabled = !gameExists || !hasHistory || !canGoBack;
-        if (btnStepMobile) btnStepMobile.disabled = !gameExists;
-        if (btnLastMobile) btnLastMobile.disabled = !gameExists;
+        // Update menu items state
+        document.getElementById('menu-first')?.toggleAttribute('disabled', !gameExists || !hasHistory || !canGoBack);
+        document.getElementById('menu-prev')?.toggleAttribute('disabled', !gameExists || !hasHistory || !canGoBack);
+        document.getElementById('menu-step')?.toggleAttribute('disabled', !gameExists);
+        document.getElementById('menu-last')?.toggleAttribute('disabled', !gameExists);
     }
 
-    // Set controls to loading state (during turn execution)
     setHistoryLoading(loading) {
-        if (this.btnStep) {
-            this.btnStep.disabled = loading;
-            if (loading) {
-                this.btnStep.textContent = '⏳';
-            } else {
-                this.btnStep.textContent = '▶';
-            }
+        const stepIcon = this.btnStep?.querySelector('ion-icon');
+        if (stepIcon) {
+            stepIcon.name = loading ? 'hourglass-outline' : 'play-forward';
         }
         if (this.btnFirst) this.btnFirst.disabled = loading;
         if (this.btnPrev) this.btnPrev.disabled = loading;
@@ -595,15 +485,14 @@ class GameUI {
             : 'Neutral';
         const ownerColor = this.colors[hexData.owner] || '#888';
 
-        // Unit info
         let unitHtml = '';
         if (hexData.unit) {
             const unitIcons = {
-                peasant: '🧑‍🌾',
-                spearman: '🗡️',
-                knight: '⚔️',
-                baron: '👑',
-                castle: '🏰'
+                peasant: 'P',
+                spearman: 'S',
+                knight: 'K',
+                baron: 'B',
+                castle: 'C'
             };
             const icon = unitIcons[hexData.unit.type] || '?';
             const moved = hexData.unit.has_moved ? '<span class="hex-moved">(moved)</span>' : '';
@@ -616,21 +505,18 @@ class GameUI {
             `;
         }
 
-        // Terrain info
         const terrainIcons = {
-            land: '🟩',
-            sea: '🌊',
-            tree: '🌲',
-            grave: '💀'
+            land: 'L',
+            sea: '~',
+            tree: 'T',
+            grave: 'X'
         };
         const terrainIcon = terrainIcons[hexData.terrain] || '';
 
-        // Capital indicator
         const capitalHtml = hexData.has_capital
-            ? '<div class="hex-capital"><span>🏛️</span> <span>Capital</span></div>'
+            ? '<div class="hex-capital"><span>C</span> <span>Capital</span></div>'
             : '';
 
-        // Region stats (if territory)
         let regionHtml = '';
         if (regionInfo && regionInfo.hexes.length > 0) {
             regionHtml = `
@@ -664,13 +550,10 @@ class GameUI {
 
     showPlacementMode(unitType) {
         let banner = document.getElementById('placement-banner');
-        if (!banner) {
-            banner = document.createElement('div');
-            banner.id = 'placement-banner';
-            document.getElementById('game-area').appendChild(banner);
+        if (banner) {
+            banner.innerHTML = `Click a highlighted hex to place <strong>${unitType}</strong> <button onclick="humanPlayer.cancelPlacement()">Cancel</button>`;
+            banner.style.display = 'block';
         }
-        banner.innerHTML = `Click a highlighted hex to place <strong>${unitType}</strong> <button onclick="humanPlayer.cancelPlacement()">Cancel</button>`;
-        banner.style.display = 'block';
     }
 
     hidePlacementMode() {
@@ -680,12 +563,7 @@ class GameUI {
 
     updateState(state) {
         this.state = state;
-        this.updatePlayers();
         this.updateStatusBar();
-    }
-
-    updatePlayers() {
-        // Player cards removed from UI
     }
 
     updateStatusBar() {
@@ -701,7 +579,6 @@ class GameUI {
             const player = this.state.players[this.state.current_player];
             this.currentPlayer.textContent = `Current: ${player.color_name}`;
             this.currentPlayerId = player.id;
-            this.updatePlayers();
         }
     }
 
@@ -710,9 +587,50 @@ class GameUI {
         this.connectionStatus.className = connected ? 'connected' : 'disconnected';
     }
 
-    // Legacy method - now handled by setPlayButtonState and setHistoryPosition
     setGameControls(gameExists, gameRunning) {
-        this.btnNew.disabled = false;
+        // Legacy method - now handled by setPlayButtonState and setHistoryPosition
+    }
+
+    // Modal helpers using Ionic
+    async showSetupModal() {
+        if (this.setupModal) {
+            await this.setupModal.present();
+        }
+    }
+
+    async hideSetupModal() {
+        if (this.setupModal) {
+            await this.setupModal.dismiss();
+        }
+    }
+
+    async showLoadModal() {
+        if (this.loadModal) {
+            await this.loadModal.present();
+        }
+    }
+
+    async hideLoadModal() {
+        if (this.loadModal) {
+            await this.loadModal.dismiss();
+        }
+    }
+
+    async showStatsModal() {
+        if (this.statsModal) {
+            await this.statsModal.present();
+        }
+    }
+
+    // Toast notifications using Ionic
+    async showToast(message, color = 'primary', duration = 2000) {
+        const toast = document.createElement('ion-toast');
+        toast.message = message;
+        toast.duration = duration;
+        toast.color = color;
+        toast.position = 'bottom';
+        document.body.appendChild(toast);
+        await toast.present();
     }
 
     addLog(type, playerId, content) {
@@ -730,7 +648,6 @@ class GameUI {
         this.logContent.appendChild(entry);
         this.logContent.scrollTop = this.logContent.scrollHeight;
 
-        // Limit log entries
         while (this.logContent.children.length > 100) {
             this.logContent.removeChild(this.logContent.firstChild);
         }
@@ -754,6 +671,9 @@ class GameUI {
         entry.style.setProperty('--player-color', this.colors[winnerId]);
         entry.innerHTML = `<strong>GAME OVER - ${winnerName} wins!</strong>`;
         this.logContent.appendChild(entry);
+
+        // Show toast
+        this.showToast(`Game Over! ${winnerName} wins!`, 'warning', 5000);
     }
 
     escapeHtml(text) {

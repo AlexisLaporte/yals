@@ -37,9 +37,19 @@ class HexBoard {
         // Load unit SVGs
         this.loadUnitAssets();
 
-        // Resize handler
+        // Resize handler - delay initial resize to let Ionic render
         this.resize();
         window.addEventListener('resize', () => this.resize());
+
+        // Re-check size after Ionic has likely rendered
+        setTimeout(() => this.resize(), 100);
+        setTimeout(() => this.resize(), 500);
+
+        // Use ResizeObserver for more reliable sizing
+        if (window.ResizeObserver && this.canvas.parentElement) {
+            this.resizeObserver = new ResizeObserver(() => this.resize());
+            this.resizeObserver.observe(this.canvas.parentElement);
+        }
 
         // Zoom/pan handlers
         this.setupZoomPan();
@@ -336,7 +346,13 @@ class HexBoard {
     }
 
     resize() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
+        const parent = this.canvas.parentElement;
+        if (!parent) return;
+
+        const rect = parent.getBoundingClientRect();
+
+        // Skip if parent has no dimensions yet (Ionic still loading)
+        if (rect.width < 50 || rect.height < 50) return;
 
         // Responsive padding based on screen size
         const isMobile = window.innerWidth < 768;

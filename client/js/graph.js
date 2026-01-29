@@ -6,17 +6,17 @@ class StatsGraph {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.chart = null;
-        // Use same colors as board/ui
+        // Use same colors as board/ui (modern pastel palette)
         this.colors = {
-            0: '#E08080',
-            1: '#80A0E0',
-            2: '#80C080',
-            3: '#E0E080',
-            4: '#C080C0',
-            5: '#E0A060'
+            0: '#F0A8A8',  // Soft rose
+            1: '#A8C8F0',  // Sky blue
+            2: '#B8E0B0',  // Mint green
+            3: '#F0E8A8',  // Pale yellow
+            4: '#D8B8E8',  // Lavender
+            5: '#F0C8A8'   // Peach
         };
-        this.colorNames = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange'];
-        this.treesColor = '#2D5016';  // Dark forest green for trees
+        this.colorNames = ['Rose', 'Sky', 'Mint', 'Sunny', 'Lavender', 'Peach'];
+        this.treesColor = '#7AA870';  // Soft forest green for trees
         this.currentMetric = 'territory';
         this.showTrees = true;
         this.lastTurn = 0;  // Track last turn to avoid duplicates
@@ -254,12 +254,15 @@ class StatsGraph {
     }
 
     getTextColor() {
-        return getComputedStyle(document.documentElement)
-            .getPropertyValue('--text-secondary').trim() || '#666';
+        // Use Ionic color system
+        const isDark = document.body.classList.contains('dark') ||
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+        return isDark ? '#A8A090' : '#5A5048';
     }
 
     getGridColor() {
-        return getComputedStyle(document.documentElement)
-            .getPropertyValue('--border-color').trim() || '#ccc';
+        const isDark = document.body.classList.contains('dark') ||
+                       document.documentElement.getAttribute('data-theme') === 'dark';
+        return isDark ? '#383432' : '#E0DCD5';
     }
 }

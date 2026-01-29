@@ -8,8 +8,8 @@ if TYPE_CHECKING:
     from .board import Board, Hex
 
 
-COLORS = ["#e63946", "#457b9d", "#2a9d8f", "#e9c46a", "#9b5de5", "#f77f00"]
-COLOR_NAMES = ["Red", "Blue", "Green", "Yellow", "Purple", "Orange"]
+COLORS = ["#F0A8A8", "#A8C8F0", "#B8E0B0", "#F0E8A8", "#D8B8E8", "#F0C8A8"]
+COLOR_NAMES = ["Rose", "Sky", "Mint", "Sunny", "Lavender", "Peach"]
 
 
 @dataclass
